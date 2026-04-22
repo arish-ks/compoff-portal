@@ -707,7 +707,7 @@ app.post('/api/submit', async (req, res) => {
   try {
     await transporter.sendMail({
       from: `"DPDzero Comp-Off Portal" <${process.env.GMAIL_USER}>`,
-      to: 'arish@dpdzero.com',
+      to: 'sandeep@dpdzero.com',
       subject: isUseBalance
         ? `💳 Balance Leave (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''}): ${employeeName} — ${compoffShort}`
         : isLeave
