@@ -854,17 +854,44 @@
           <div id="typeInfoBox" style="display:none;margin-top:12px;padding:12px 14px;border-radius:10px;font-size:12px;font-family:'Inter',sans-serif;line-height:1.6;border:1px solid"></div>
         </div>
 
-        <!-- Section 4: Comp-off date (only shown if take_leave) -->
+        <!-- Section 4: Leave date calendar (only shown if take_leave) -->
         <div class="form-section" id="leaveDateSection" style="display:none">
           <div class="section-header">
             <div class="section-icon mint">🏖️</div>
             <div>
-              <div class="section-title">Comp-Off Date Requested</div>
-              <div class="section-subtitle">Which working day would you like off?</div>
+              <div class="section-title">Select Leave Date(s)</div>
+              <div class="section-subtitle">Pick the working days you want to take off</div>
             </div>
           </div>
-          <label for="compoffDate">Preferred Leave Date</label>
-          <input type="date" id="compoffDate" name="compoffDate" />
+
+          <!-- Balance indicator -->
+          <div id="balanceBar" style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-radius:10px;background:rgba(103,90,249,0.08);border:1px solid rgba(103,90,249,0.2);margin-bottom:14px">
+            <span style="font-size:12px;font-family:'Inter',sans-serif;color:rgba(255,255,255,0.5)">Available comp-off balance:</span>
+            <span id="balanceDisplay" style="font-size:13px;font-weight:700;font-family:'Inter',sans-serif;color:var(--purple-300)">— days</span>
+          </div>
+
+          <!-- Leave calendar nav -->
+          <div class="cal-nav">
+            <button type="button" class="cal-nav-btn" onclick="changeLeaveMonth(-1)">&#8249;</button>
+            <span class="cal-month-label" id="leaveCalMonthLabel"></span>
+            <button type="button" class="cal-nav-btn" onclick="changeLeaveMonth(1)">&#8250;</button>
+          </div>
+          <div class="cal-grid" id="leaveCalGrid"></div>
+
+          <!-- Legend -->
+          <div class="cal-legend" style="margin-top:10px">
+            <div class="cal-legend-item">
+              <div class="cal-legend-dot" style="background:var(--purple-500)"></div> Selected leave day
+            </div>
+            <div class="cal-legend-item" style="margin-left:auto">
+              <span id="leaveSelectionCount" style="color:rgba(255,255,255,0.4);font-size:11px;font-family:'Inter',sans-serif">No dates selected</span>
+              &nbsp;
+              <button type="button" class="clear-btn" id="leaveClearBtn" onclick="clearLeaveSelection()" style="display:none">Clear</button>
+            </div>
+          </div>
+
+          <!-- Selected leave tags -->
+          <div class="selected-tags" id="leaveSelectedTags"></div>
         </div>
 
         <!-- Section 4: Reason -->
@@ -1052,39 +1079,204 @@
   // Init calendar
   renderCalendar();
 
-  // ── Comp-off date min ──
-  const compoffInput = document.getElementById('compoffDate');
-  compoffInput.min = new Date().toISOString().split('T')[0];
+  // ── Leave date calendar (future working days) ──────────────────────────────
+  const leaveDates = new Set();
+  let leaveCalYear  = today.getFullYear();
+  let leaveCalMonth = today.getMonth();
+  let availableBalance = 0;
+
+  function renderLeaveCalendar() {
+    const grid  = document.getElementById('leaveCalGrid');
+    const label = document.getElementById('leaveCalMonthLabel');
+    if (!grid) return;
+    grid.innerHTML = '';
+    label.textContent = `${MONTHS[leaveCalMonth]} ${leaveCalYear}`;
+
+    // Don't allow going before current month
+    const isPastMonth = leaveCalYear < today.getFullYear() ||
+      (leaveCalYear === today.getFullYear() && leaveCalMonth < today.getMonth());
+    document.getElementById('leaveCalGrid').previousElementSibling.querySelector('.cal-nav-btn:first-child')
+      .style.opacity = isPastMonth ? '0.3' : '1';
+
+    // Day headers
+    DAY_HEADERS.forEach((d, i) => {
+      const h = document.createElement('div');
+      h.className = 'cal-day-header ' + (i === 0 || i === 6 ? 'weekend' : 'weekday');
+      h.textContent = d;
+      grid.appendChild(h);
+    });
+
+    const firstDay    = new Date(leaveCalYear, leaveCalMonth, 1).getDay();
+    const daysInMonth = new Date(leaveCalYear, leaveCalMonth + 1, 0).getDate();
+
+    for (let i = 0; i < firstDay; i++) {
+      const e = document.createElement('div');
+      e.className = 'cal-cell empty';
+      grid.appendChild(e);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cellDate = new Date(leaveCalYear, leaveCalMonth, d);
+      cellDate.setHours(0,0,0,0);
+      const dow     = cellDate.getDay();
+      const iso     = toISO(leaveCalYear, leaveCalMonth, d);
+      const isPast  = cellDate <= today;
+      const isWknd  = dow === 0 || dow === 6;
+      const isToday = cellDate.getTime() === today.getTime();
+
+      const cell = document.createElement('div');
+      cell.textContent = d;
+
+      if (isPast || isWknd) {
+        cell.className = 'cal-cell weekday'; // greyed — weekends and past not available for leave
+      } else {
+        // Future working day — can take leave
+        const alreadySelected = leaveDates.has(iso);
+        const atLimit = !alreadySelected && leaveDates.size >= availableBalance;
+        cell.className = `cal-cell weekend`; // reuse weekend style for clickable
+        if (alreadySelected) cell.classList.add('selected');
+        if (atLimit) {
+          cell.classList.remove('weekend');
+          cell.classList.add('weekday');
+          cell.title = 'No more comp-off days available';
+        } else {
+          cell.addEventListener('click', () => toggleLeaveDate(cell, iso));
+        }
+        if (alreadySelected) {
+          // re-add click to deselect even if at limit
+          cell.classList.remove('weekday');
+          cell.className = 'cal-cell weekend selected';
+          cell.addEventListener('click', () => toggleLeaveDate(cell, iso));
+        }
+      }
+
+      if (isToday) cell.classList.add('today');
+      grid.appendChild(cell);
+    }
+  }
+
+  function toggleLeaveDate(cell, iso) {
+    if (leaveDates.has(iso)) {
+      leaveDates.delete(iso);
+      cell.classList.remove('selected');
+    } else {
+      if (leaveDates.size >= availableBalance) {
+        showToast(`You only have ${availableBalance} comp-off day${availableBalance !== 1 ? 's' : ''} available.`, 'error');
+        return;
+      }
+      leaveDates.add(iso);
+      cell.classList.add('selected');
+    }
+    renderLeaveTags();
+    updateLeaveSelectionUI();
+    renderLeaveCalendar();
+    updateSteps();
+  }
+
+  function renderLeaveTags() {
+    const wrap = document.getElementById('leaveSelectedTags');
+    if (!wrap) return;
+    wrap.innerHTML = '';
+    const sorted = Array.from(leaveDates).sort();
+    sorted.forEach(iso => {
+      const dt  = new Date(iso + 'T00:00:00');
+      const lbl = dt.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+      const tag = document.createElement('div');
+      tag.className = 'selected-tag';
+      tag.innerHTML = `${lbl} <span class="selected-tag-remove" onclick="removeLeaveDate('${iso}')">✕</span>`;
+      wrap.appendChild(tag);
+    });
+  }
+
+  function removeLeaveDate(iso) {
+    leaveDates.delete(iso);
+    renderLeaveCalendar();
+    renderLeaveTags();
+    updateLeaveSelectionUI();
+    updateSteps();
+  }
+
+  function clearLeaveSelection() {
+    leaveDates.clear();
+    renderLeaveCalendar();
+    renderLeaveTags();
+    updateLeaveSelectionUI();
+    updateSteps();
+  }
+
+  function updateLeaveSelectionUI() {
+    const count = leaveDates.size;
+    const el    = document.getElementById('leaveSelectionCount');
+    const btn   = document.getElementById('leaveClearBtn');
+    if (!el) return;
+    el.textContent = count === 0 ? 'No dates selected'
+      : `${count} of ${availableBalance} day${availableBalance !== 1 ? 's' : ''} selected`;
+    el.style.color = count > 0 ? 'var(--purple-300)' : 'rgba(255,255,255,0.4)';
+    btn.style.display = count > 0 ? 'inline-block' : 'none';
+  }
+
+  function changeLeaveMonth(dir) {
+    leaveCalMonth += dir;
+    if (leaveCalMonth < 0)  { leaveCalMonth = 11; leaveCalYear--; }
+    if (leaveCalMonth > 11) { leaveCalMonth = 0;  leaveCalYear++; }
+    // Don't go before current month
+    if (leaveCalYear < today.getFullYear() ||
+        (leaveCalYear === today.getFullYear() && leaveCalMonth < today.getMonth())) {
+      leaveCalMonth -= dir;
+      if (leaveCalMonth < 0)  { leaveCalMonth = 11; leaveCalYear++; }
+      if (leaveCalMonth > 11) { leaveCalMonth = 0;  leaveCalYear--; }
+      return;
+    }
+    renderLeaveCalendar();
+  }
+
+  async function fetchBalanceForEmployee(name) {
+    if (!name) return;
+    try {
+      const res  = await fetch(`/api/balance/${encodeURIComponent(name)}`);
+      const data = await res.json();
+      availableBalance = Math.max(0, data.remaining);
+      const display = document.getElementById('balanceDisplay');
+      if (display) {
+        display.textContent = `${availableBalance} day${availableBalance !== 1 ? 's' : ''}`;
+        display.style.color = availableBalance === 0 ? '#FB9490'
+          : availableBalance <= 2 ? 'var(--golden-500)' : 'var(--mint-300)';
+      }
+      renderLeaveCalendar();
+      updateLeaveSelectionUI();
+    } catch {}
+  }
 
   // ── Request type toggle ──
   function onRequestTypeChange() {
-    const type = document.getElementById('requestType').value;
-    const leaveDateSection = document.getElementById('leaveDateSection');
-    const infoBox = document.getElementById('typeInfoBox');
-    const compoff = document.getElementById('compoffDate');
-    const hint = document.getElementById('submitHintText');
+    const type       = document.getElementById('requestType').value;
+    const leaveSection = document.getElementById('leaveDateSection');
+    const infoBox    = document.getElementById('typeInfoBox');
+    const hint       = document.getElementById('submitHintText');
     const btnContent = document.getElementById('btnContent');
 
     if (type === 'take_leave') {
-      leaveDateSection.style.display = 'block';
-      compoff.required = true;
+      leaveSection.style.display = 'block';
+      // Fetch latest balance for selected employee
+      const name = document.getElementById('employeeName').value;
+      if (name) fetchBalanceForEmployee(name);
+      renderLeaveCalendar();
       infoBox.style.display = 'block';
       infoBox.style.background = 'rgba(8,202,151,0.08)';
       infoBox.style.borderColor = 'rgba(8,202,151,0.25)';
       infoBox.style.color = 'rgba(255,255,255,0.6)';
-      infoBox.innerHTML = '<strong style="color:#6BDFC1">Taking leave now</strong> — Sandeep will receive an approval email with your chosen date. Once approved, HR is notified and your leave is recorded.';
-      hint.textContent = 'Your leave request will go to Sandeep for approval. HR is notified only after approval.';
+      infoBox.innerHTML = '<strong style="color:#6BDFC1">Taking leave now</strong> — Select the working day(s) you want off. Only the days you select will be deducted. Your remaining balance stays intact.';
+      hint.textContent = 'Your leave request will go to Sandeep for approval. Only selected days are deducted.';
       btnContent.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 8M9 3L14 8L9 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Request Leave';
     } else if (type === 'accumulate') {
-      leaveDateSection.style.display = 'none';
-      compoff.required = false;
-      compoff.value = '';
+      leaveSection.style.display = 'none';
+      leaveDates.clear();
       infoBox.style.display = 'block';
       infoBox.style.background = 'rgba(92,170,250,0.08)';
       infoBox.style.borderColor = 'rgba(92,170,250,0.25)';
       infoBox.style.color = 'rgba(255,255,255,0.6)';
-      infoBox.innerHTML = '<strong style="color:#8AC1FA">Banking credit</strong> — No leave date needed. Sandeep will be notified that you\'ve worked on these days and your comp-off credit will be recorded for future use.';
-      hint.textContent = 'Sandeep will be notified to acknowledge your weekend work. You can use this credit anytime later.';
+      infoBox.innerHTML = '<strong style="color:#8AC1FA">Banking credit</strong> — No leave date needed. Sandeep will be notified and your comp-off credit will be banked for future use.';
+      hint.textContent = 'Sandeep will acknowledge your weekend work. You can use this credit anytime later.';
       btnContent.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 7l5-5 5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Bank Comp-Off Credit';
     }
     updateSteps();
@@ -1092,24 +1284,28 @@
 
   // ── Steps ──
   function updateSteps() {
-    const name = document.getElementById('employeeName').value;
+    const name     = document.getElementById('employeeName').value;
     const hasDates = selectedDates.size > 0;
-    const type = document.getElementById('requestType').value;
-    const hasCompoff = type === 'accumulate' ? true : compoffInput.value;
+    const type     = document.getElementById('requestType').value;
+    const hasLeave = type === 'accumulate' ? true : leaveDates.size > 0;
     const hasReason = document.getElementById('reason').value.trim().length > 0;
 
     setStep(1, name ? 'done' : 'active');
     setStep(2, hasDates ? 'done' : (name ? 'active' : 'inactive'));
-    setStep(3, (hasDates && type && hasCompoff && hasReason) ? 'active' : 'inactive');
+    setStep(3, (hasDates && type && hasLeave && hasReason) ? 'active' : 'inactive');
   }
 
   function setStep(n, state) {
     document.getElementById('step' + n).className = 'step ' + state;
   }
 
-  document.getElementById('employeeName').addEventListener('change', updateSteps);
-  document.getElementById('requestType').addEventListener('change', updateSteps);
-  document.getElementById('compoffDate').addEventListener('change', updateSteps);
+  document.getElementById('employeeName').addEventListener('change', () => {
+    const name = document.getElementById('employeeName').value;
+    const type = document.getElementById('requestType').value;
+    if (type === 'take_leave' && name) fetchBalanceForEmployee(name);
+    updateSteps();
+  });
+  document.getElementById('requestType').addEventListener('change', onRequestTypeChange);
   document.getElementById('reason').addEventListener('input', updateSteps);
 
   // ── Form submit ──
@@ -1127,8 +1323,8 @@
       return;
     }
 
-    if (requestType === 'take_leave' && !compoffInput.value) {
-      showToast('Please select your preferred comp-off date.', 'error');
+    if (requestType === 'take_leave' && leaveDates.size === 0) {
+      showToast('Please select at least one comp-off date.', 'error');
       return;
     }
 
@@ -1141,7 +1337,7 @@
       employeeName: document.getElementById('employeeName').value,
       workedDates: Array.from(selectedDates),
       requestType,
-      compoffDate: requestType === 'take_leave' ? compoffInput.value : null,
+      compoffDates: requestType === 'take_leave' ? Array.from(leaveDates).sort() : null,
       reason: document.getElementById('reason').value,
     };
 
@@ -1162,6 +1358,10 @@
         renderCalendar();
         renderTags();
         updateSelectionUI();
+        leaveDates.clear();
+        renderLeaveCalendar();
+        renderLeaveTags();
+        updateLeaveSelectionUI();
         document.getElementById('leaveDateSection').style.display = 'none';
         document.getElementById('typeInfoBox').style.display = 'none';
         const defaultBtn = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 8M9 3L14 8L9 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Send Request to Manager';
