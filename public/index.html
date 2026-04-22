@@ -3,302 +3,907 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Comp-Off Request | DPDzero Data Support</title>
+  <title>Comp-Off Request — DPDzero</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3csvg width='256' height='256' viewBox='0 0 32 32' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M0 6H21.9355C27.494 6 32 10.506 32 16.0645C32 21.623 27.494 26.129 21.9355 26.129H0V6Z' fill='%23675AF9' /%3e%3cpath d='M6.52387 19.7414H8.53884C9.05634 19.7414 9.53531 19.6533 9.97574 19.4772C10.4272 19.29 10.8181 19.0312 11.1484 18.7009C11.4897 18.3706 11.7485 17.9852 11.9246 17.5448C12.1118 17.1043 12.2054 16.6254 12.2054 16.1079C12.2054 15.5904 12.1118 15.1114 11.9246 14.671C11.7375 14.2195 11.4787 13.8286 11.1484 13.4983C10.8181 13.168 10.4272 12.9092 9.97574 12.7221C9.53531 12.5349 9.05634 12.4413 8.53884 12.4413H6.52387V19.7414ZM4.12903 21.872V10.3107H8.57187C9.44172 10.3107 10.2455 10.4594 10.9832 10.7566C11.7209 11.0429 12.3651 11.4503 12.9156 11.9788C13.4661 12.5074 13.8956 13.124 14.2039 13.8286C14.5232 14.5333 14.6828 15.2931 14.6828 16.1079C14.6828 16.9337 14.5287 17.6934 14.2204 18.3871C13.9121 19.0808 13.4772 19.6919 12.9156 20.2204C12.3651 20.7379 11.7209 21.1453 10.9832 21.4426C10.2455 21.7289 9.44172 21.872 8.57187 21.872H4.12903Z' fill='white' /%3e%3cpath d='M21.9876 22.0537C21.1288 22.0537 20.3305 21.905 19.5928 21.6077C18.8551 21.2994 18.2054 20.8755 17.6439 20.336C17.0933 19.7855 16.6584 19.1523 16.3391 18.4366C16.0308 17.7099 15.8766 16.9282 15.8766 16.0914C15.8766 15.2545 16.0308 14.4783 16.3391 13.7626C16.6584 13.0359 17.0933 12.4028 17.6439 11.8632C18.2054 11.3127 18.8551 10.8888 19.5928 10.5915C20.3305 10.2832 21.1288 10.129 21.9876 10.129C22.8465 10.129 23.6447 10.2832 24.3825 10.5915C25.1312 10.8888 25.7808 11.3127 26.3314 11.8632C26.8929 12.4028 27.3278 13.0359 27.6361 13.7626C27.9444 14.4783 28.0986 15.2545 28.0986 16.0914C28.0986 16.9282 27.9444 17.7099 27.6361 18.4366C27.3278 19.1523 26.8929 19.7855 26.3314 20.336C25.7808 20.8755 25.1312 21.2994 24.3825 21.6077C23.6447 21.905 22.8465 22.0537 21.9876 22.0537ZM21.9876 19.857C22.5161 19.857 23.0006 19.7634 23.441 19.5763C23.8815 19.3781 24.2668 19.1138 24.5972 18.7835C24.9275 18.4422 25.1862 18.0403 25.3734 17.5778C25.5606 17.1154 25.6542 16.6199 25.6542 16.0914C25.6542 15.5518 25.5606 15.0563 25.3734 14.6049C25.1862 14.1425 24.9275 13.7461 24.5972 13.4157C24.2668 13.0744 23.8815 12.8102 23.441 12.623C23.0006 12.4248 22.5161 12.3257 21.9876 12.3257C21.4701 12.3257 20.9911 12.4248 20.5507 12.623C20.1103 12.8102 19.7249 13.0744 19.3946 13.4157C19.0643 13.7461 18.8055 14.1425 18.6183 14.6049C18.4311 15.0563 18.3375 15.5463 18.3375 16.0748C18.3375 16.6144 18.4311 17.1154 18.6183 17.5778C18.8055 18.0403 19.0643 18.4422 19.3946 18.7835C19.7249 19.1138 20.1103 19.3781 20.5507 19.5763C20.9911 19.7634 21.4701 19.857 21.9876 19.857Z' fill='white' /%3e%3c/svg%3e">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Red+Hat+Text:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
   <style>
+    :root {
+      --purple-500: #675AF9;
+      --purple-400: #8D83FF;
+      --purple-300: #BFB9FF;
+      --purple-200: #DAD7FF;
+      --purple-100: #F1F0FF;
+      --sky-500: #5CAAFA;
+      --sky-100: #EEF6FF;
+      --mint-500: #08CA97;
+      --mint-100: #CEF4EA;
+      --golden-500: #FFCA54;
+      --sunset-500: #F94C46;
+      --sunset-100: #FEDBDA;
+      --deep-900: #210076;
+      --deep-950: #08005D;
+      --deep-990: #00002A;
+      --snow: #FBFBFF;
+      --neutral-100: #F5F5FA;
+      --neutral-200: #E8E8F0;
+      --neutral-400: #9898B0;
+      --neutral-600: #4A4A6A;
+      --neutral-800: #1A1A35;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      font-family: 'Inter', sans-serif;
+      background: var(--deep-990);
+      min-height: 100vh;
+      color: var(--neutral-800);
+      overflow-x: hidden;
+    }
+
+    /* ── Background mesh ── */
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 10%, rgba(103,90,249,0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 80%, rgba(92,170,250,0.2) 0%, transparent 55%),
+        radial-gradient(ellipse 40% 40% at 50% 50%, rgba(8,202,151,0.08) 0%, transparent 60%),
+        var(--deep-990);
+      pointer-events: none;
+    }
+
+    /* ── Layout ── */
+    .page {
+      position: relative;
+      z-index: 1;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 20px;
+      justify-content: space-between;
+      padding: 20px 32px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      backdrop-filter: blur(12px);
+      background: rgba(0,0,42,0.5);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
-    .card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 40px 36px;
-      width: 100%;
-      max-width: 500px;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
 
-    .logo {
-      text-align: center;
-      margin-bottom: 28px;
+    .logo-svg {
+      width: 110px;
+      height: auto;
     }
 
-    .logo h1 {
-      font-size: 22px;
-      color: #1a1a2e;
-      font-weight: 700;
-      letter-spacing: 0.5px;
+    .header-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255,255,255,0.15);
+      margin: 0 12px;
     }
 
-    .logo p {
-      font-size: 13px;
-      color: #888;
-      margin-top: 4px;
-    }
-
-    .badge {
-      display: inline-block;
-      background: #eef2ff;
-      color: #4361ee;
-      font-size: 11px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: 20px;
-      margin-bottom: 20px;
+    .header-label {
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.5);
       letter-spacing: 0.5px;
       text-transform: uppercase;
     }
 
+    .header-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(103,90,249,0.15);
+      border: 1px solid rgba(103,90,249,0.3);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--purple-300);
+      letter-spacing: 0.3px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint-500);
+      box-shadow: 0 0 8px var(--mint-500);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Main content ── */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 20px 80px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      text-align: center;
+      margin-bottom: 48px;
+      max-width: 560px;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(103,90,249,0.12);
+      border: 1px solid rgba(103,90,249,0.25);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--purple-300);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-family: 'Red Hat Display', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 900;
+      color: var(--snow);
+      line-height: 1.1;
+      margin-bottom: 14px;
+      letter-spacing: -0.5px;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--purple-400), var(--sky-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-family: 'Red Hat Text', sans-serif;
+      font-size: 1rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.6;
+    }
+
+    /* ── Steps indicator ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 40px;
+    }
+
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      transition: all 0.3s;
+    }
+
+    .step.active .step-num {
+      background: var(--purple-500);
+      color: #fff;
+      box-shadow: 0 0 16px rgba(103,90,249,0.5);
+    }
+
+    .step.done .step-num {
+      background: var(--mint-500);
+      color: #fff;
+    }
+
+    .step.inactive .step-num {
+      background: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .step-label {
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.3px;
+    }
+
+    .step.active .step-label { color: var(--snow); }
+    .step.done .step-label { color: var(--mint-500); }
+    .step.inactive .step-label { color: rgba(255,255,255,0.25); }
+
+    .step-line {
+      width: 40px;
+      height: 1px;
+      background: rgba(255,255,255,0.1);
+      margin: 0 4px;
+    }
+
+    /* ── Form Card ── */
+    .form-card {
+      width: 100%;
+      max-width: 560px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      backdrop-filter: blur(20px);
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.4), 0 0 0 1px rgba(103,90,249,0.1);
+    }
+
+    /* ── Form sections ── */
+    .form-section {
+      padding: 28px 32px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .form-section:last-of-type { border-bottom: none; }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .section-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .section-icon.purple { background: rgba(103,90,249,0.15); }
+    .section-icon.sky    { background: rgba(92,170,250,0.15); }
+    .section-icon.mint   { background: rgba(8,202,151,0.15); }
+    .section-icon.golden { background: rgba(255,202,84,0.15); }
+
+    .section-title {
+      font-family: 'Red Hat Display', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--snow);
+      letter-spacing: 0.2px;
+    }
+
+    .section-subtitle {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+      margin-top: 1px;
+      font-family: 'Inter', sans-serif;
+    }
+
+    /* ── Form inputs ── */
     label {
       display: block;
-      font-size: 13px;
+      font-size: 11px;
       font-weight: 600;
-      color: #333;
-      margin-bottom: 6px;
-      margin-top: 18px;
+      color: rgba(255,255,255,0.5);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-family: 'Inter', sans-serif;
     }
 
     select, input[type="date"], textarea {
       width: 100%;
-      padding: 11px 14px;
-      border: 1.5px solid #dde1e7;
-      border-radius: 8px;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
       font-size: 14px;
-      color: #222;
-      background: #fafafa;
-      transition: border-color 0.2s;
+      color: var(--snow);
+      font-family: 'Inter', sans-serif;
       outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+      appearance: none;
     }
 
+    select { background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%238D83FF' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 12px center; background-size: 16px; padding-right: 36px; }
+
+    select option { background: #120047; color: #fff; }
+
     select:focus, input[type="date"]:focus, textarea:focus {
-      border-color: #4361ee;
-      background: #fff;
+      border-color: var(--purple-500);
+      background: rgba(103,90,249,0.08);
+      box-shadow: 0 0 0 3px rgba(103,90,249,0.15);
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(0.6);
+      cursor: pointer;
     }
 
     textarea {
       resize: vertical;
-      min-height: 80px;
+      min-height: 90px;
+      line-height: 1.6;
     }
 
-    .weekend-pills {
-      display: flex;
-      flex-wrap: wrap;
+    /* ── Weekend pills ── */
+    .pills-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
       gap: 8px;
-      margin-top: 6px;
     }
 
     .pill {
-      padding: 8px 14px;
-      border-radius: 20px;
-      border: 1.5px solid #dde1e7;
-      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      color: rgba(255,255,255,0.5);
       cursor: pointer;
-      background: #fafafa;
-      color: #555;
-      transition: all 0.2s;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
       user-select: none;
     }
 
-    .pill:hover { border-color: #4361ee; color: #4361ee; }
+    .pill:hover {
+      border-color: var(--purple-400);
+      color: var(--snow);
+      background: rgba(103,90,249,0.08);
+    }
+
     .pill.selected {
-      background: #4361ee;
-      color: #fff;
-      border-color: #4361ee;
+      background: rgba(103,90,249,0.18);
+      border-color: var(--purple-500);
+      color: var(--snow);
+      box-shadow: 0 0 0 1px rgba(103,90,249,0.3);
     }
 
-    .compoff-date-section {
-      margin-top: 18px;
-    }
-
-    button[type="submit"] {
-      margin-top: 28px;
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #4361ee, #3a0ca3);
-      color: #fff;
-      font-size: 15px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
+    .pill-day {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 5px;
       letter-spacing: 0.4px;
+      text-transform: uppercase;
+    }
+
+    .pill.saturday .pill-day  { background: rgba(92,170,250,0.15);  color: var(--sky-500); }
+    .pill.sunday   .pill-day  { background: rgba(103,90,249,0.15);  color: var(--purple-400); }
+    .pill.saturday.selected .pill-day { background: rgba(92,170,250,0.3); }
+    .pill.sunday.selected   .pill-day { background: rgba(103,90,249,0.3); }
+
+    .pill-check {
+      margin-left: auto;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.18s;
+      font-size: 9px;
+    }
+
+    .pill.selected .pill-check {
+      background: var(--purple-500);
+      border-color: var(--purple-500);
+      color: #fff;
+    }
+
+    /* ── Submit button ── */
+    .submit-section {
+      padding: 24px 32px;
+      background: rgba(103,90,249,0.04);
+      border-top: 1px solid rgba(103,90,249,0.15);
+    }
+
+    .submit-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, var(--purple-500) 0%, #4A3FD4 100%);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(103,90,249,0.35);
+    }
+
+    .submit-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+      opacity: 0;
       transition: opacity 0.2s;
     }
 
-    button[type="submit"]:hover { opacity: 0.9; }
-    button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+    .submit-btn:hover::before { opacity: 1; }
+    .submit-btn:hover { box-shadow: 0 6px 32px rgba(103,90,249,0.5); transform: translateY(-1px); }
+    .submit-btn:active { transform: translateY(0); }
+    .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .submit-hint {
+      text-align: center;
+      margin-top: 12px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.25);
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    /* ── Toast ── */
+    .toast-wrap {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
 
     .toast {
-      display: none;
-      margin-top: 18px;
-      padding: 12px 16px;
-      border-radius: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 14px 18px;
+      border-radius: 12px;
       font-size: 13px;
+      font-family: 'Inter', sans-serif;
       font-weight: 500;
+      max-width: 340px;
+      backdrop-filter: blur(20px);
+      transform: translateX(120%);
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+      pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     }
 
-    .toast.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
-    .toast.error   { background: #fdecea; color: #c62828; border-left: 4px solid #f44336; }
+    .toast.show { transform: translateX(0); }
 
-    .divider {
-      height: 1px;
-      background: #eee;
-      margin: 22px 0 4px;
+    .toast.success {
+      background: rgba(8,202,151,0.15);
+      border: 1px solid rgba(8,202,151,0.3);
+      color: #6BDFC1;
     }
 
-    .note {
-      font-size: 12px;
-      color: #999;
-      margin-top: 10px;
+    .toast.error {
+      background: rgba(249,76,70,0.15);
+      border: 1px solid rgba(249,76,70,0.3);
+      color: #FB9490;
+    }
+
+    .toast-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+    .toast-text { line-height: 1.5; }
+
+    /* ── Footer ── */
+    footer {
       text-align: center;
+      padding: 24px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.18);
+      font-family: 'Inter', sans-serif;
+      border-top: 1px solid rgba(255,255,255,0.05);
+    }
+
+    footer a { color: var(--purple-400); text-decoration: none; }
+
+    /* ── Loader spinner ── */
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Selection counter ── */
+    .selection-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .selection-count {
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      color: rgba(255,255,255,0.35);
+      transition: color 0.2s;
+    }
+
+    .selection-count.has-selection { color: var(--purple-400); }
+
+    .clear-btn {
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      color: rgba(255,255,255,0.25);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      display: none;
+    }
+
+    .clear-btn.visible { display: block; color: var(--sunset-500); }
+
+    /* ── Responsive ── */
+    @media (max-width: 480px) {
+      header { padding: 14px 18px; }
+      main { padding: 32px 14px 60px; }
+      .hero h1 { font-size: 1.8rem; }
+      .form-section { padding: 22px 20px; }
+      .submit-section { padding: 20px; }
+      .pills-grid { grid-template-columns: 1fr; }
+      .steps { display: none; }
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo">
-      <h1>DPDzero — Comp-Off Request</h1>
-      <p>Data Support Team</p>
+
+<div class="bg-mesh"></div>
+
+<div class="page">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-wrap">
+      <!-- DPDzero SVG logo inline -->
+      <svg class="logo-svg" viewBox="0 0 200 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="8" width="38" height="32" rx="0" fill="none"/>
+        <path d="M0 9H30.0C36.6 9 42 14.4 42 21.1C42 27.7 36.6 33.1 30.0 33.1H0V9Z" fill="#675AF9"/>
+        <path d="M6.5 26.7H8.5C9 26.7 9.5 26.6 9.9 26.4C10.3 26.3 10.7 26.0 11.0 25.7C11.3 25.4 11.6 25.0 11.7 24.6C11.9 24.2 12.0 23.7 12.0 23.2C12.0 22.7 11.9 22.2 11.7 21.8C11.6 21.3 11.3 21.0 11.0 20.6C10.7 20.3 10.3 20.1 9.9 19.9C9.5 19.7 9.0 19.6 8.5 19.6H6.5V26.7ZM4.1 28.8V17.5H8.5C9.4 17.5 10.2 17.6 10.9 17.9C11.6 18.2 12.3 18.6 12.8 19.1C13.4 19.6 13.8 20.2 14.1 20.9C14.4 21.6 14.6 22.3 14.6 23.2C14.6 24.0 14.4 24.8 14.1 25.5C13.8 26.2 13.4 26.8 12.8 27.3C12.3 27.8 11.6 28.2 10.9 28.5C10.2 28.7 9.4 28.8 8.5 28.8H4.1Z" fill="white"/>
+        <path d="M22.0 29.0C21.1 29.0 20.3 28.9 19.6 28.6C18.8 28.3 18.2 27.9 17.6 27.4C17.1 26.8 16.6 26.2 16.3 25.4C16.0 24.7 15.9 23.9 15.9 23.1C15.9 22.2 16.0 21.4 16.3 20.7C16.7 20.0 17.1 19.4 17.6 18.8C18.2 18.3 18.8 17.9 19.6 17.6C20.3 17.3 21.1 17.1 22.0 17.1C22.8 17.1 23.6 17.3 24.4 17.6C25.1 17.9 25.8 18.3 26.3 18.8C26.9 19.4 27.3 20.0 27.6 20.7C27.9 21.4 28.1 22.2 28.1 23.1C28.1 23.9 27.9 24.7 27.6 25.4C27.3 26.2 26.9 26.8 26.3 27.4C25.8 27.9 25.1 28.3 24.4 28.6C23.6 28.9 22.8 29.0 22.0 29.0ZM22.0 26.9C22.5 26.9 23.0 26.8 23.4 26.6C23.9 26.4 24.2 26.1 24.6 25.8C24.9 25.4 25.2 25.0 25.4 24.6C25.6 24.1 25.7 23.6 25.7 23.1C25.7 22.5 25.6 22.0 25.4 21.6C25.2 21.1 24.9 20.7 24.6 20.4C24.2 20.0 23.9 19.8 23.4 19.6C23.0 19.4 22.5 19.3 22.0 19.3C21.5 19.3 21.0 19.4 20.5 19.6C20.1 19.8 19.7 20.0 19.4 20.4C19.1 20.7 18.8 21.1 18.6 21.6C18.4 22.0 18.3 22.5 18.3 23.1C18.3 23.6 18.4 24.1 18.6 24.6C18.8 25.0 19.1 25.4 19.4 25.8C19.7 26.1 20.1 26.4 20.5 26.6C21.0 26.8 21.5 26.9 22.0 26.9Z" fill="white"/>
+        <!-- "dpdzero" text -->
+        <text x="50" y="30" font-family="Red Hat Display, sans-serif" font-weight="700" font-size="18" fill="#FBFBFF" letter-spacing="-0.3">dpdzero</text>
+      </svg>
+      <div class="header-divider"></div>
+      <span class="header-label">Internal Portal</span>
+    </div>
+    <div class="header-badge">
+      <span class="status-dot"></span>
+      Data Support
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main>
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="hero-eyebrow">
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="5" fill="#675AF9"/></svg>
+        Compensatory Off Portal
+      </div>
+      <h1>Request Your <span>Comp-Off</span><br>Leave</h1>
+      <p>Worked over the weekend? You deserve a break. Submit your comp-off request below and get it approved by your manager instantly.</p>
     </div>
 
-    <span class="badge">Weekend Work Compensation</span>
-
-    <form id="compoffForm">
-
-      <label for="employeeName">Your Name</label>
-      <select id="employeeName" name="employeeName" required>
-        <option value="" disabled selected>Select your name</option>
-        <option value="Aravind">Aravind</option>
-        <option value="Arish">Arish</option>
-        <option value="Laxman">Laxman</option>
-        <option value="Harshit Raj">Harshit Raj</option>
-        <option value="Nikhil">Nikhil</option>
-      </select>
-
-      <label>Weekend Day(s) Worked <span style="color:#999;font-weight:400">(select all that apply)</span></label>
-      <div class="weekend-pills" id="pillContainer"></div>
-
-      <div class="compoff-date-section">
-        <label for="compoffDate">Comp-Off Date Requested</label>
-        <input type="date" id="compoffDate" name="compoffDate" required />
+    <!-- Steps -->
+    <div class="steps" id="stepsBar">
+      <div class="step active" id="step1">
+        <div class="step-num">1</div>
+        <div class="step-label">Your Details</div>
       </div>
+      <div class="step-line"></div>
+      <div class="step inactive" id="step2">
+        <div class="step-num">2</div>
+        <div class="step-label">Select Dates</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step inactive" id="step3">
+        <div class="step-num">3</div>
+        <div class="step-label">Submit</div>
+      </div>
+    </div>
 
-      <label for="reason">Reason / Work Done</label>
-      <textarea id="reason" name="reason" placeholder="Briefly describe the work you did on the weekend..." required></textarea>
+    <!-- Form Card -->
+    <div class="form-card">
+      <form id="compoffForm">
 
-      <div class="divider"></div>
+        <!-- Section 1: Who are you -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon purple">👤</div>
+            <div>
+              <div class="section-title">Your Identity</div>
+              <div class="section-subtitle">Select your name from the Data Support team</div>
+            </div>
+          </div>
+          <label for="employeeName">Team Member</label>
+          <select id="employeeName" name="employeeName" required>
+            <option value="" disabled selected>Choose your name...</option>
+            <option value="Aravind">Aravind</option>
+            <option value="Arish">Arish</option>
+            <option value="Laxman">Laxman</option>
+            <option value="Harshit Raj">Harshit Raj</option>
+            <option value="Nikhil">Nikhil</option>
+          </select>
+        </div>
 
-      <button type="submit" id="submitBtn">Submit Request to Sandeep</button>
+        <!-- Section 2: Weekend days worked -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon sky">📅</div>
+            <div>
+              <div class="section-title">Weekend Day(s) Worked</div>
+              <div class="section-subtitle">Select all the weekend days you came in</div>
+            </div>
+          </div>
+          <div class="selection-bar">
+            <span class="selection-count" id="selectionCount">No days selected</span>
+            <button type="button" class="clear-btn" id="clearBtn" onclick="clearPills()">Clear all</button>
+          </div>
+          <div class="pills-grid" id="pillContainer"></div>
+        </div>
 
-      <div class="toast" id="toast"></div>
+        <!-- Section 3: Comp-off date -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon mint">🏖️</div>
+            <div>
+              <div class="section-title">Comp-Off Date Requested</div>
+              <div class="section-subtitle">Which working day would you like off?</div>
+            </div>
+          </div>
+          <label for="compoffDate">Preferred Leave Date</label>
+          <input type="date" id="compoffDate" name="compoffDate" required />
+        </div>
 
-      <p class="note">Your request will be sent to Sandeep for approval. HR will be notified once approved.</p>
-    </form>
-  </div>
+        <!-- Section 4: Reason -->
+        <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon golden">📝</div>
+            <div>
+              <div class="section-title">Work Summary</div>
+              <div class="section-subtitle">Briefly describe what you worked on</div>
+            </div>
+          </div>
+          <label for="reason">What did you work on?</label>
+          <textarea id="reason" name="reason" placeholder="e.g. Processed weekend data batch, resolved critical support tickets, handled client escalations..." required></textarea>
+        </div>
 
-  <script>
-    // Generate last 8 weekend dates (Sat & Sun)
-    function getRecentWeekends() {
-      const dates = [];
-      const today = new Date();
-      let d = new Date(today);
-      d.setDate(d.getDate() - 1); // start from yesterday
-      let count = 0;
-      while (dates.length < 10 && count < 60) {
-        const day = d.getDay();
-        if (day === 0 || day === 6) {
-          dates.push(new Date(d));
-        }
-        d.setDate(d.getDate() - 1);
-        count++;
-      }
-      return dates.reverse();
+        <!-- Submit -->
+        <div class="submit-section">
+          <button type="submit" class="submit-btn" id="submitBtn">
+            <span id="btnContent" style="display:flex;align-items:center;gap:8px">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 8M9 3L14 8L9 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Send Request to Manager
+            </span>
+          </button>
+          <div class="submit-hint">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" stroke="rgba(255,255,255,0.25)"/><path d="M5 4V6M5 7V7.5" stroke="rgba(255,255,255,0.25)" stroke-linecap="round"/></svg>
+            Your request will go to Sandeep for approval. HR is notified only after approval.
+          </div>
+        </div>
+
+      </form>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <p>© 2026 <a href="https://dpdzero.com" target="_blank">DPDzero Technologies Pvt Ltd</a> &nbsp;·&nbsp; Internal use only &nbsp;·&nbsp; Data Support Team</p>
+  </footer>
+
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+  // ── Generate recent weekend dates ──
+  function getRecentWeekends(n = 10) {
+    const dates = [];
+    let d = new Date();
+    d.setDate(d.getDate() - 1);
+    let count = 0;
+    while (dates.length < n && count < 90) {
+      const day = d.getDay();
+      if (day === 0 || day === 6) dates.push(new Date(d));
+      d.setDate(d.getDate() - 1);
+      count++;
+    }
+    return dates.reverse();
+  }
+
+  const container = document.getElementById('pillContainer');
+  const selectedDates = new Set();
+
+  getRecentWeekends().forEach(date => {
+    const day = date.getDay();
+    const isSat = day === 6;
+    const dayLabel = isSat ? 'Sat' : 'Sun';
+    const dateLabel = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const iso = date.toISOString().split('T')[0];
+
+    const pill = document.createElement('div');
+    pill.className = `pill ${isSat ? 'saturday' : 'sunday'}`;
+    pill.dataset.date = iso;
+    pill.innerHTML = `
+      <span class="pill-day">${dayLabel}</span>
+      <span style="flex:1">${dateLabel}</span>
+      <span class="pill-check">✓</span>
+    `;
+    pill.addEventListener('click', () => togglePill(pill, iso));
+    container.appendChild(pill);
+  });
+
+  function togglePill(pill, iso) {
+    if (selectedDates.has(iso)) {
+      selectedDates.delete(iso);
+      pill.classList.remove('selected');
+    } else {
+      selectedDates.add(iso);
+      pill.classList.add('selected');
+    }
+    updateSelectionUI();
+    updateSteps();
+  }
+
+  function clearPills() {
+    selectedDates.clear();
+    document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+    updateSelectionUI();
+  }
+
+  function updateSelectionUI() {
+    const count = selectedDates.size;
+    const el = document.getElementById('selectionCount');
+    const clearBtn = document.getElementById('clearBtn');
+    el.textContent = count === 0 ? 'No days selected' : `${count} day${count > 1 ? 's' : ''} selected`;
+    el.className = 'selection-count' + (count > 0 ? ' has-selection' : '');
+    clearBtn.className = 'clear-btn' + (count > 0 ? ' visible' : '');
+  }
+
+  // ── Set min date for comp-off ──
+  const compoffInput = document.getElementById('compoffDate');
+  compoffInput.min = new Date().toISOString().split('T')[0];
+
+  // ── Steps animation ──
+  function updateSteps() {
+    const name = document.getElementById('employeeName').value;
+    const hasDates = selectedDates.size > 0;
+    const hasCompoff = compoffInput.value;
+    const hasReason = document.getElementById('reason').value.trim().length > 0;
+
+    setStep(1, name ? 'done' : 'active');
+    setStep(2, hasDates ? 'done' : (name ? 'active' : 'inactive'));
+    setStep(3, (hasDates && hasCompoff && hasReason) ? 'active' : 'inactive');
+  }
+
+  function setStep(n, state) {
+    const el = document.getElementById('step' + n);
+    el.className = 'step ' + state;
+  }
+
+  document.getElementById('employeeName').addEventListener('change', updateSteps);
+  document.getElementById('compoffDate').addEventListener('change', updateSteps);
+  document.getElementById('reason').addEventListener('input', updateSteps);
+
+  // ── Form submit ──
+  document.getElementById('compoffForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (selectedDates.size === 0) {
+      showToast('Please select at least one weekend day you worked.', 'error');
+      return;
     }
 
-    const container = document.getElementById('pillContainer');
-    const selectedDates = new Set();
+    const btn = document.getElementById('submitBtn');
+    const btnContent = document.getElementById('btnContent');
+    btn.disabled = true;
+    btnContent.innerHTML = '<div class="spinner"></div> Sending request...';
 
-    getRecentWeekends().forEach(date => {
-      const label = date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-      const iso = date.toISOString().split('T')[0];
-      const pill = document.createElement('div');
-      pill.className = 'pill';
-      pill.textContent = label;
-      pill.dataset.date = iso;
-      pill.addEventListener('click', () => {
-        if (selectedDates.has(iso)) {
-          selectedDates.delete(iso);
-          pill.classList.remove('selected');
-        } else {
-          selectedDates.add(iso);
-          pill.classList.add('selected');
-        }
+    const payload = {
+      employeeName: document.getElementById('employeeName').value,
+      workedDates: Array.from(selectedDates),
+      compoffDate: compoffInput.value,
+      reason: document.getElementById('reason').value,
+    };
+
+    try {
+      const res = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      container.appendChild(pill);
-    });
-
-    // Set min date for comp-off (today or future)
-    const compoffInput = document.getElementById('compoffDate');
-    const today = new Date().toISOString().split('T')[0];
-    compoffInput.min = today;
-
-    document.getElementById('compoffForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      if (selectedDates.size === 0) {
-        showToast('Please select at least one weekend day you worked.', 'error');
-        return;
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Request sent! Sandeep will receive an approval email shortly.', 'success');
+        e.target.reset();
+        selectedDates.clear();
+        document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+        updateSelectionUI();
+        updateSteps();
+      } else {
+        showToast(data.error || 'Something went wrong. Please try again.', 'error');
       }
-
-      const btn = document.getElementById('submitBtn');
-      btn.disabled = true;
-      btn.textContent = 'Submitting...';
-
-      const payload = {
-        employeeName: document.getElementById('employeeName').value,
-        workedDates: Array.from(selectedDates),
-        compoffDate: document.getElementById('compoffDate').value,
-        reason: document.getElementById('reason').value,
-      };
-
-      try {
-        const res = await fetch('/api/submit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          showToast('Request submitted! Sandeep will receive an email to approve your comp-off.', 'success');
-          e.target.reset();
-          selectedDates.clear();
-          document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
-        } else {
-          showToast(data.error || 'Something went wrong. Please try again.', 'error');
-        }
-      } catch (err) {
-        showToast('Network error. Please check your connection.', 'error');
-      }
-
-      btn.disabled = false;
-      btn.textContent = 'Submit Request to Sandeep';
-    });
-
-    function showToast(msg, type) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.className = `toast ${type}`;
-      t.style.display = 'block';
-      setTimeout(() => { t.style.display = 'none'; }, 6000);
+    } catch {
+      showToast('Network error. Please check your connection and try again.', 'error');
     }
-  </script>
+
+    btn.disabled = false;
+    btnContent.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 8M9 3L14 8L9 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Send Request to Manager';
+  });
+
+  // ── Toast ──
+  function showToast(message, type) {
+    const wrap = document.getElementById('toastWrap');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+      <span class="toast-icon">${type === 'success' ? '✅' : '⚠️'}</span>
+      <span class="toast-text">${message}</span>
+    `;
+    wrap.appendChild(toast);
+    requestAnimationFrame(() => { requestAnimationFrame(() => toast.classList.add('show')); });
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 400);
+    }, 5000);
+  }
+</script>
 </body>
 </html>

@@ -182,24 +182,40 @@ app.get('/api/action', async (req, res) => {
 
 // Simple response page
 function page(title, message, color) {
+  const isSuccess = color === '#4caf50';
+  const accentColor = isSuccess ? '#08CA97' : '#F94C46';
+  const accentBg    = isSuccess ? 'rgba(8,202,151,0.12)' : 'rgba(249,76,70,0.12)';
+  const accentBorder= isSuccess ? 'rgba(8,202,151,0.3)' : 'rgba(249,76,70,0.3)';
+  const emoji       = isSuccess ? '✅' : '❌';
   return `<!DOCTYPE html>
   <html>
-  <head><meta charset="UTF-8"><title>${title}</title>
+  <head><meta charset="UTF-8"><title>${title} — DPDzero</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@700;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    body{font-family:Segoe UI,sans-serif;background:#f5f5f5;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0}
-    .box{background:#fff;padding:40px 36px;border-radius:16px;max-width:460px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.12)}
-    .icon{font-size:48px;margin-bottom:16px}
-    h1{color:${color};font-size:22px;margin-bottom:10px}
-    p{color:#555;font-size:15px;line-height:1.6}
-    a{display:inline-block;margin-top:24px;padding:10px 24px;background:${color};color:#fff;border-radius:8px;text-decoration:none;font-size:14px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Inter',sans-serif;background:#00002A;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 30%,rgba(103,90,249,0.3) 0%,transparent 60%),radial-gradient(ellipse 60% 50% at 80% 70%,rgba(8,202,151,0.12) 0%,transparent 55%);pointer-events:none}
+    .card{position:relative;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;padding:48px 40px;max-width:480px;width:100%;text-align:center;backdrop-filter:blur(20px);box-shadow:0 32px 80px rgba(0,0,0,0.4)}
+    .icon-wrap{width:72px;height:72px;border-radius:50%;background:${accentBg};border:1px solid ${accentBorder};display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 24px}
+    h1{font-family:'Red Hat Display',sans-serif;font-size:1.75rem;font-weight:900;color:#FBFBFF;margin-bottom:12px;letter-spacing:-0.3px}
+    p{font-size:14px;color:rgba(255,255,255,0.5);line-height:1.7;margin-bottom:0}
+    p strong{color:rgba(255,255,255,0.85)}
+    .back-btn{display:inline-flex;align-items:center;gap:8px;margin-top:28px;padding:12px 24px;background:linear-gradient(135deg,#675AF9,#4A3FD4);color:#fff;border-radius:10px;text-decoration:none;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(103,90,249,0.3);transition:all 0.2s}
+    .back-btn:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(103,90,249,0.45)}
+    .logo{margin-bottom:32px;opacity:0.7;font-family:'Red Hat Display',sans-serif;font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase}
   </style></head>
   <body>
-    <div class="box">
-      <div class="icon">${color === '#4caf50' ? '✅' : '❌'}</div>
+    <div class="card">
+      <div class="logo">DPDzero · Comp-Off Portal</div>
+      <div class="icon-wrap">${emoji}</div>
       <h1>${title}</h1>
       <p>${message}</p>
-      <a href="/">Back to Portal</a>
+      <a class="back-btn" href="/">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7H2M6 3L2 7L6 11" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to Portal
+      </a>
     </div>
   </body></html>`;
 }
