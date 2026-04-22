@@ -360,57 +360,169 @@
       line-height: 1.6;
     }
 
-    /* ── Weekend pills ── */
-    .pills-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-    }
-
-    .pill {
-      padding: 10px 14px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.1);
-      background: rgba(255,255,255,0.04);
-      font-size: 12px;
-      font-weight: 500;
-      font-family: 'Inter', sans-serif;
-      color: rgba(255,255,255,0.5);
-      cursor: pointer;
-      transition: all 0.18s;
+    /* ── Calendar ── */
+    .cal-nav {
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .cal-nav-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.7);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
       user-select: none;
     }
+    .cal-nav-btn:hover { background: rgba(103,90,249,0.2); border-color: var(--purple-400); color: #fff; }
 
-    .pill:hover {
-      border-color: var(--purple-400);
+    .cal-month-label {
+      font-family: 'Red Hat Display', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
       color: var(--snow);
-      background: rgba(103,90,249,0.08);
     }
 
-    .pill.selected {
-      background: rgba(103,90,249,0.18);
-      border-color: var(--purple-500);
-      color: var(--snow);
-      box-shadow: 0 0 0 1px rgba(103,90,249,0.3);
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
     }
 
-    .pill-day {
+    .cal-day-header {
+      text-align: center;
       font-size: 10px;
       font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 5px;
-      letter-spacing: 0.4px;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.5px;
       text-transform: uppercase;
+      padding: 4px 0 8px;
+    }
+    .cal-day-header.weekend { color: var(--purple-400); }
+    .cal-day-header.weekday { color: rgba(255,255,255,0.25); }
+
+    .cal-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      transition: all 0.15s;
+      position: relative;
     }
 
-    .pill.saturday .pill-day  { background: rgba(92,170,250,0.15);  color: var(--sky-500); }
-    .pill.sunday   .pill-day  { background: rgba(103,90,249,0.15);  color: var(--purple-400); }
-    .pill.saturday.selected .pill-day { background: rgba(92,170,250,0.3); }
-    .pill.sunday.selected   .pill-day { background: rgba(103,90,249,0.3); }
+    .cal-cell.empty { pointer-events: none; }
 
+    .cal-cell.weekday {
+      color: rgba(255,255,255,0.2);
+      cursor: not-allowed;
+    }
+
+    .cal-cell.future {
+      color: rgba(255,255,255,0.15);
+      cursor: not-allowed;
+    }
+
+    .cal-cell.weekend {
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .cal-cell.weekend:hover {
+      background: rgba(103,90,249,0.15);
+      border-color: var(--purple-400);
+      color: #fff;
+    }
+    .cal-cell.saturday { border-color: rgba(92,170,250,0.2); }
+    .cal-cell.sunday   { border-color: rgba(103,90,249,0.2); }
+
+    .cal-cell.selected {
+      background: linear-gradient(135deg, var(--purple-500), #4A3FD4) !important;
+      border-color: var(--purple-500) !important;
+      color: #fff !important;
+      box-shadow: 0 2px 12px rgba(103,90,249,0.4);
+      font-weight: 700;
+    }
+    .cal-cell.selected.saturday {
+      background: linear-gradient(135deg, var(--sky-500), #3a8fd4) !important;
+      border-color: var(--sky-500) !important;
+      box-shadow: 0 2px 12px rgba(92,170,250,0.4);
+    }
+
+    .cal-cell.today {
+      outline: 2px solid rgba(255,202,84,0.5);
+      outline-offset: -2px;
+    }
+
+    .cal-legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .cal-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: 'Inter', sans-serif;
+      color: rgba(255,255,255,0.4);
+    }
+    .cal-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    /* Selected tags below calendar */
+    .selected-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+      min-height: 0;
+    }
+    .selected-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      background: rgba(103,90,249,0.15);
+      border: 1px solid rgba(103,90,249,0.3);
+      color: var(--purple-300);
+    }
+    .selected-tag.saturday {
+      background: rgba(92,170,250,0.12);
+      border-color: rgba(92,170,250,0.3);
+      color: var(--sky-500);
+    }
+    .selected-tag-remove {
+      cursor: pointer;
+      opacity: 0.6;
+      font-size: 12px;
+      line-height: 1;
+    }
+    .selected-tag-remove:hover { opacity: 1; }
+
+    /* Keep pill-check for backward compat */
     .pill-check {
       margin-left: auto;
       width: 16px;
@@ -674,20 +786,46 @@
           </select>
         </div>
 
-        <!-- Section 2: Weekend days worked -->
+        <!-- Section 2: Calendar date picker -->
         <div class="form-section">
           <div class="section-header">
             <div class="section-icon sky">📅</div>
             <div>
               <div class="section-title">Weekend Day(s) Worked</div>
-              <div class="section-subtitle">Select all the weekend days you came in</div>
+              <div class="section-subtitle">Click on the weekend dates you came in — you can select multiple</div>
             </div>
           </div>
-          <div class="selection-bar">
-            <span class="selection-count" id="selectionCount">No days selected</span>
-            <button type="button" class="clear-btn" id="clearBtn" onclick="clearPills()">Clear all</button>
+
+          <!-- Calendar nav -->
+          <div class="cal-nav">
+            <button type="button" class="cal-nav-btn" id="calPrev" onclick="changeMonth(-1)">&#8249;</button>
+            <span class="cal-month-label" id="calMonthLabel"></span>
+            <button type="button" class="cal-nav-btn" id="calNext" onclick="changeMonth(1)">&#8250;</button>
           </div>
-          <div class="pills-grid" id="pillContainer"></div>
+
+          <!-- Day headers -->
+          <div class="cal-grid" id="calGrid"></div>
+
+          <!-- Legend -->
+          <div class="cal-legend">
+            <div class="cal-legend-item">
+              <div class="cal-legend-dot" style="background:var(--sky-500)"></div> Saturday
+            </div>
+            <div class="cal-legend-item">
+              <div class="cal-legend-dot" style="background:var(--purple-400)"></div> Sunday
+            </div>
+            <div class="cal-legend-item">
+              <div class="cal-legend-dot" style="background:rgba(255,202,84,0.5);outline:2px solid rgba(255,202,84,0.5)"></div> Today
+            </div>
+            <div class="cal-legend-item" style="margin-left:auto">
+              <span id="selectionCount" style="color:rgba(255,255,255,0.4)">No days selected</span>
+              &nbsp;
+              <button type="button" class="clear-btn" id="clearBtn" onclick="clearSelection()" style="display:none">Clear all</button>
+            </div>
+          </div>
+
+          <!-- Selected date tags -->
+          <div class="selected-tags" id="selectedTags"></div>
         </div>
 
         <!-- Section 3: Request type -->
@@ -766,59 +904,134 @@
 <div class="toast-wrap" id="toastWrap"></div>
 
 <script>
-  // ── Generate recent weekend dates ──
-  function getRecentWeekends(n = 10) {
-    const dates = [];
-    let d = new Date();
-    d.setDate(d.getDate() - 1);
-    let count = 0;
-    while (dates.length < n && count < 90) {
-      const day = d.getDay();
-      if (day === 0 || day === 6) dates.push(new Date(d));
-      d.setDate(d.getDate() - 1);
-      count++;
-    }
-    return dates.reverse();
+  // ── Calendar state ──
+  const selectedDates = new Set();
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  let calYear  = today.getFullYear();
+  let calMonth = today.getMonth();
+
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAY_HEADERS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  function toISO(y, m, d) {
+    return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   }
 
-  const container = document.getElementById('pillContainer');
-  const selectedDates = new Set();
+  function renderCalendar() {
+    const grid = document.getElementById('calGrid');
+    const label = document.getElementById('calMonthLabel');
+    grid.innerHTML = '';
+    label.textContent = `${MONTHS[calMonth]} ${calYear}`;
 
-  getRecentWeekends().forEach(date => {
-    const day = date.getDay();
-    const isSat = day === 6;
-    const dayLabel = isSat ? 'Sat' : 'Sun';
-    const dateLabel = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const iso = date.toISOString().split('T')[0];
+    // Disable "next" if already at current month
+    const isCurrentMonth = calYear === today.getFullYear() && calMonth === today.getMonth();
+    document.getElementById('calNext').style.opacity = isCurrentMonth ? '0.3' : '1';
+    document.getElementById('calNext').style.pointerEvents = isCurrentMonth ? 'none' : 'auto';
 
-    const pill = document.createElement('div');
-    pill.className = `pill ${isSat ? 'saturday' : 'sunday'}`;
-    pill.dataset.date = iso;
-    pill.innerHTML = `
-      <span class="pill-day">${dayLabel}</span>
-      <span style="flex:1">${dateLabel}</span>
-      <span class="pill-check">✓</span>
-    `;
-    pill.addEventListener('click', () => togglePill(pill, iso));
-    container.appendChild(pill);
-  });
+    // Day header row
+    DAY_HEADERS.forEach((d, i) => {
+      const h = document.createElement('div');
+      h.className = 'cal-day-header ' + (i === 0 || i === 6 ? 'weekend' : 'weekday');
+      h.textContent = d;
+      grid.appendChild(h);
+    });
 
-  function togglePill(pill, iso) {
+    const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+    const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+    // Empty leading cells
+    for (let i = 0; i < firstDay; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'cal-cell empty';
+      grid.appendChild(empty);
+    }
+
+    // Day cells
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cell = document.createElement('div');
+      const cellDate = new Date(calYear, calMonth, d);
+      cellDate.setHours(0,0,0,0);
+      const dow = cellDate.getDay();
+      const iso = toISO(calYear, calMonth, d);
+      const isFuture = cellDate > today;
+      const isToday  = cellDate.getTime() === today.getTime();
+      const isWeekend = dow === 0 || dow === 6;
+      const isSat = dow === 6;
+
+      cell.textContent = d;
+
+      if (isFuture) {
+        cell.className = 'cal-cell future';
+      } else if (!isWeekend) {
+        cell.className = 'cal-cell weekday';
+      } else {
+        cell.className = `cal-cell weekend ${isSat ? 'saturday' : 'sunday'}`;
+        if (selectedDates.has(iso)) cell.classList.add('selected');
+        cell.addEventListener('click', () => toggleDate(cell, iso, isSat));
+      }
+
+      if (isToday) cell.classList.add('today');
+      grid.appendChild(cell);
+    }
+  }
+
+  function toggleDate(cell, iso, isSat) {
     if (selectedDates.has(iso)) {
       selectedDates.delete(iso);
-      pill.classList.remove('selected');
+      cell.classList.remove('selected');
     } else {
       selectedDates.add(iso);
-      pill.classList.add('selected');
+      cell.classList.add('selected');
     }
+    renderTags();
     updateSelectionUI();
     updateSteps();
   }
 
-  function clearPills() {
-    selectedDates.clear();
-    document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+  function changeMonth(dir) {
+    calMonth += dir;
+    if (calMonth < 0)  { calMonth = 11; calYear--; }
+    if (calMonth > 11) { calMonth = 0;  calYear++; }
+    // Don't allow going to future months
+    if (calYear > today.getFullYear() || (calYear === today.getFullYear() && calMonth > today.getMonth())) {
+      calMonth -= dir;
+      if (calMonth < 0)  { calMonth = 11; calYear--; }
+      if (calMonth > 11) { calMonth = 0;  calYear++; }
+      return;
+    }
+    renderCalendar();
+  }
+
+  function renderTags() {
+    const wrap = document.getElementById('selectedTags');
+    wrap.innerHTML = '';
+    const sorted = Array.from(selectedDates).sort();
+    sorted.forEach(iso => {
+      const dt = new Date(iso + 'T00:00:00');
+      const isSat = dt.getDay() === 6;
+      const label = dt.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+      const tag = document.createElement('div');
+      tag.className = `selected-tag ${isSat ? 'saturday' : ''}`;
+      tag.innerHTML = `${label} <span class="selected-tag-remove" onclick="removeDate('${iso}')">✕</span>`;
+      wrap.appendChild(tag);
+    });
+  }
+
+  function removeDate(iso) {
+    selectedDates.delete(iso);
+    renderCalendar();
+    renderTags();
     updateSelectionUI();
+    updateSteps();
+  }
+
+  function clearSelection() {
+    selectedDates.clear();
+    renderCalendar();
+    renderTags();
+    updateSelectionUI();
+    updateSteps();
   }
 
   function updateSelectionUI() {
@@ -826,11 +1039,14 @@
     const el = document.getElementById('selectionCount');
     const clearBtn = document.getElementById('clearBtn');
     el.textContent = count === 0 ? 'No days selected' : `${count} day${count > 1 ? 's' : ''} selected`;
-    el.className = 'selection-count' + (count > 0 ? ' has-selection' : '');
-    clearBtn.className = 'clear-btn' + (count > 0 ? ' visible' : '');
+    el.style.color = count > 0 ? 'var(--purple-300)' : 'rgba(255,255,255,0.4)';
+    clearBtn.style.display = count > 0 ? 'inline-block' : 'none';
   }
 
-  // ── Set min date for comp-off ──
+  // Init calendar
+  renderCalendar();
+
+  // ── Comp-off date min ──
   const compoffInput = document.getElementById('compoffDate');
   compoffInput.min = new Date().toISOString().split('T')[0];
 
@@ -868,7 +1084,7 @@
     updateSteps();
   }
 
-  // ── Steps animation ──
+  // ── Steps ──
   function updateSteps() {
     const name = document.getElementById('employeeName').value;
     const hasDates = selectedDates.size > 0;
@@ -882,8 +1098,7 @@
   }
 
   function setStep(n, state) {
-    const el = document.getElementById('step' + n);
-    el.className = 'step ' + state;
+    document.getElementById('step' + n).className = 'step ' + state;
   }
 
   document.getElementById('employeeName').addEventListener('change', updateSteps);
@@ -938,7 +1153,8 @@
         showToast(msg, 'success');
         e.target.reset();
         selectedDates.clear();
-        document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+        renderCalendar();
+        renderTags();
         updateSelectionUI();
         document.getElementById('leaveDateSection').style.display = 'none';
         document.getElementById('typeInfoBox').style.display = 'none';
