@@ -4,10 +4,72 @@ const nodemailer = require('nodemailer');
 const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO  = 'arish-ks/compoff-portal';
+const DB_FILE_PATH = 'data/db.json';
+const SHEETS_WEBHOOK_URL = process.env.SHEETS_WEBHOOK_URL || '';
+
+// ── GitHub API helper ─────────────────────────────────────────────────────────
+function githubRequest(method, endpoint, body) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: 'api.github.com',
+      path: endpoint,
+      method,
+      headers: {
+        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+        'Content-Type': 'application/json',
+        'User-Agent': 'compoff-portal',
+        'X-GitHub-Api-Version': '2022-11-28',
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {}),
+      },
+    };
+    const req = https.request(options, res => {
+      let raw = '';
+      res.on('data', c => raw += c);
+      res.on('end', () => {
+        try { resolve(JSON.parse(raw)); } catch { resolve(raw); }
+      });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
+// ── Fetch current file SHA + content from GitHub ──────────────────────────────
+async function fetchDbFromGitHub() {
+  try {
+    const res = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}`);
+    if (!res.sha) return null;
+    const content = Buffer.from(res.content.replace(/\n/g, ''), 'base64').toString('utf8');
+    return { sha: res.sha, data: JSON.parse(content) };
+  } catch { return null; }
+}
+
+// ── Push current SQLite data back to GitHub ───────────────────────────────────
+let _dbFileSha = null;
+async function backupToGitHub() {
+  try {
+    const all = db.prepare('SELECT * FROM requests ORDER BY created_at ASC').all();
+    const content = Buffer.from(JSON.stringify({ requests: all }, null, 2)).toString('base64');
+    const body = {
+      message: `db: auto-backup ${new Date().toISOString()}`,
+      content,
+      branch: 'main',
+      ...(  _dbFileSha ? { sha: _dbFileSha } : {}),
+    };
+    const res = await githubRequest('PUT', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}`, body);
+    if (res.content?.sha) _dbFileSha = res.content.sha;
+  } catch (e) { console.error('GitHub backup error:', e.message); }
+}
 
 // ── Database ──────────────────────────────────────────────────────────────────
 const db = new Database('compoff.db');
@@ -23,30 +85,39 @@ db.exec(`
     created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
-
-// Migrate old column name if needed
-try {
-  db.exec(`ALTER TABLE requests ADD COLUMN compoff_dates TEXT`);
-} catch (_) {}
-// Copy old single-date column into new JSON array column if exists
+// Migrations
+try { db.exec(`ALTER TABLE requests ADD COLUMN compoff_dates TEXT`); } catch (_) {}
 try {
   const rows = db.prepare(`SELECT id, compoff_date FROM requests WHERE compoff_dates IS NULL AND compoff_date IS NOT NULL`).all();
   for (const r of rows) {
-    db.prepare(`UPDATE requests SET compoff_dates = ? WHERE id = ?`)
-      .run(JSON.stringify([r.compoff_date]), r.id);
+    db.prepare(`UPDATE requests SET compoff_dates = ? WHERE id = ?`).run(JSON.stringify([r.compoff_date]), r.id);
   }
 } catch (_) {}
-// Fix old bad status values 'approve' -> 'approved', 'reject' -> 'rejected'
 db.prepare(`UPDATE requests SET status = 'approved' WHERE status = 'approve'`).run();
 db.prepare(`UPDATE requests SET status = 'rejected' WHERE status = 'reject'`).run();
+
+// ── Restore from GitHub on startup ───────────────────────────────────────────
+async function restoreFromGitHub() {
+  const result = await fetchDbFromGitHub();
+  if (!result) { console.log('No GitHub backup found — starting fresh.'); return; }
+  _dbFileSha = result.sha;
+  const { requests } = result.data;
+  if (!requests?.length) return;
+  const insert = db.prepare(`
+    INSERT OR REPLACE INTO requests (id, employee, worked_dates, request_type, compoff_dates, reason, status, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  const insertMany = db.transaction(rows => {
+    for (const r of rows) insert.run(r.id, r.employee, r.worked_dates, r.request_type, r.compoff_dates, r.reason, r.status, r.created_at);
+  });
+  insertMany(requests);
+  console.log(`Restored ${requests.length} records from GitHub backup.`);
+}
 
 // ── Mailer ────────────────────────────────────────────────────────────────────
 const transporter = nodemailer.createTransport({
   service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
+  auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_PASS },
 });
 
 // ── Middleware ────────────────────────────────────────────────────────────────
@@ -57,19 +128,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 function parseDates(json) {
   try { return JSON.parse(json) || []; } catch { return []; }
 }
-
 function formatDates(datesJson) {
   return parseDates(datesJson).map(d => {
     const dt = new Date(d + 'T00:00:00');
     return dt.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
   }).join(', ');
 }
-
 function formatSingle(dateStr) {
   const dt = new Date(dateStr + 'T00:00:00');
   return dt.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
 }
-
 function formatDateShort(dateStr) {
   const dt = new Date(dateStr + 'T00:00:00');
   return dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -78,47 +146,55 @@ function formatDateShort(dateStr) {
 // ── Balance helper ────────────────────────────────────────────────────────────
 function getBalance(employee) {
   const all = db.prepare(`SELECT * FROM requests WHERE employee = ? AND status = 'approved'`).all(employee);
-  // Credits earned = worked_dates from ALL approved requests (both accumulate and take_leave)
-  const earned = all
-    .reduce((s, r) => s + parseDates(r.worked_dates).length, 0);
+  const earned = all.reduce((s, r) => s + parseDates(r.worked_dates).length, 0);
   const used = all
     .filter(r => r.request_type === 'take_leave' || r.request_type === 'use_balance')
     .reduce((s, r) => s + parseDates(r.compoff_dates).length, 0);
   return { earned, used, remaining: earned - used };
 }
 
+// ── Google Sheets webhook ─────────────────────────────────────────────────────
+async function pushToSheet(payload) {
+  if (!SHEETS_WEBHOOK_URL) return;
+  try {
+    const url = new URL(SHEETS_WEBHOOK_URL);
+    const data = JSON.stringify(payload);
+    await new Promise((resolve, reject) => {
+      const options = {
+        hostname: url.hostname,
+        path: url.pathname + url.search,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+      };
+      const req = https.request(options, res => { res.resume(); res.on('end', resolve); });
+      req.on('error', reject);
+      req.write(data);
+      req.end();
+    });
+  } catch (e) { console.error('Sheets webhook error:', e.message); }
+}
+
 // ── Dashboard API ─────────────────────────────────────────────────────────────
 app.get('/api/dashboard/:employee', (req, res) => {
   const employee = req.params.employee;
   const all = db.prepare(`SELECT * FROM requests WHERE employee = ? ORDER BY created_at DESC`).all(employee);
-
   const bal = getBalance(employee);
   const pendingCount = all.filter(r => r.status === 'pending').length;
-
   const history = all.map(r => {
-    const workedDates   = parseDates(r.worked_dates);
-    const compoffDates  = parseDates(r.compoff_dates);
+    const workedDates  = parseDates(r.worked_dates);
+    const compoffDates = parseDates(r.compoff_dates);
     return {
-      id: r.id,
-      type: r.request_type,
-      status: r.status,
-      workedDates,
-      workedDatesFormatted: formatDates(r.worked_dates),
-      daysWorked: workedDates.length,
-      compoffDates,
-      compoffDatesFormatted: compoffDates.map(d => formatDateShort(d)).join(', '),
-      leaveDaysTaken: compoffDates.length,
-      reason: r.reason,
-      createdAt: new Date(r.created_at + 'Z').toLocaleDateString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric'
-      }),
+      id: r.id, type: r.request_type, status: r.status,
+      workedDates, workedDatesFormatted: formatDates(r.worked_dates), daysWorked: workedDates.length,
+      compoffDates, compoffDatesFormatted: compoffDates.map(d => formatDateShort(d)).join(', '),
+      leaveDaysTaken: compoffDates.length, reason: r.reason,
+      createdAt: new Date(r.created_at + 'Z').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
     };
   });
-
   res.json({ employee, ...bal, pendingCount, history });
 });
 
-// ── Balance check API (for frontend enforcement) ──────────────────────────────
+// ── Balance check API ─────────────────────────────────────────────────────────
 app.get('/api/balance/:employee', (req, res) => {
   res.json(getBalance(req.params.employee));
 });
@@ -127,46 +203,35 @@ app.get('/api/balance/:employee', (req, res) => {
 app.post('/api/submit', async (req, res) => {
   const { employeeName, workedDates, requestType, compoffDates, reason } = req.body;
 
-  if (!employeeName || !requestType || !reason) {
+  if (!employeeName || !requestType || !reason)
     return res.status(400).json({ error: 'All fields are required.' });
-  }
-  if (requestType !== 'use_balance' && !workedDates?.length) {
+  if (requestType !== 'use_balance' && !workedDates?.length)
     return res.status(400).json({ error: 'Please select at least one weekend day worked.' });
-  }
-  if ((requestType === 'take_leave' || requestType === 'use_balance') && !compoffDates?.length) {
+  if ((requestType === 'take_leave' || requestType === 'use_balance') && !compoffDates?.length)
     return res.status(400).json({ error: 'Please select at least one leave date.' });
-  }
 
-  // Validate leave count against available credits
-  if (requestType === 'take_leave') {
-    if (compoffDates.length > workedDates.length) {
-      return res.status(400).json({
-        error: `You selected ${workedDates.length} weekend day${workedDates.length !== 1 ? 's' : ''} worked but requested ${compoffDates.length} leave day${compoffDates.length !== 1 ? 's' : ''}. You can only take up to ${workedDates.length}.`
-      });
-    }
-  }
+  if (requestType === 'take_leave' && compoffDates.length > workedDates.length)
+    return res.status(400).json({ error: `You selected ${workedDates.length} weekend day${workedDates.length !== 1 ? 's' : ''} worked but requested ${compoffDates.length} leave day${compoffDates.length !== 1 ? 's' : ''}. You can only take up to ${workedDates.length}.` });
+
   if (requestType === 'use_balance') {
     const bal = getBalance(employeeName);
-    if (compoffDates.length > bal.remaining) {
-      return res.status(400).json({
-        error: `You only have ${bal.remaining} banked day${bal.remaining !== 1 ? 's' : ''} available. You requested ${compoffDates.length}.`
-      });
-    }
+    if (compoffDates.length > bal.remaining)
+      return res.status(400).json({ error: `You only have ${bal.remaining} banked day${bal.remaining !== 1 ? 's' : ''} available. You requested ${compoffDates.length}.` });
   }
 
   const id = uuidv4();
-  db.prepare(`
-    INSERT INTO requests (id, employee, worked_dates, request_type, compoff_dates, reason)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, employeeName, JSON.stringify(workedDates || []), requestType,
+  db.prepare(`INSERT INTO requests (id, employee, worked_dates, request_type, compoff_dates, reason) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(id, employeeName, JSON.stringify(workedDates || []), requestType,
          (requestType === 'take_leave' || requestType === 'use_balance') ? JSON.stringify(compoffDates) : null, reason);
 
-  const workedFormatted   = workedDates?.length ? formatDates(JSON.stringify(workedDates)) : '—';
-  const isLeave           = requestType === 'take_leave' || requestType === 'use_balance';
-  const isUseBalance      = requestType === 'use_balance';
-  const leaveDaysCount    = isLeave ? compoffDates.length : 0;
-  const compoffFormatted  = isLeave ? compoffDates.map(d => formatSingle(d)).join('<br>') : null;
-  const compoffShort      = isLeave ? compoffDates.map(d => formatDateShort(d)).join(', ') : null;
+  backupToGitHub(); // fire-and-forget
+
+  const workedFormatted  = workedDates?.length ? formatDates(JSON.stringify(workedDates)) : '—';
+  const isLeave          = requestType === 'take_leave' || requestType === 'use_balance';
+  const isUseBalance     = requestType === 'use_balance';
+  const leaveDaysCount   = isLeave ? compoffDates.length : 0;
+  const compoffFormatted = isLeave ? compoffDates.map(d => formatSingle(d)).join('<br>') : null;
+  const compoffShort     = isLeave ? compoffDates.map(d => formatDateShort(d)).join(', ') : null;
 
   const approveUrl = `${BASE_URL}/api/action?id=${id}&action=approve`;
   const rejectUrl  = `${BASE_URL}/api/action?id=${id}&action=reject`;
@@ -185,19 +250,18 @@ app.post('/api/submit', async (req, res) => {
          <tr><td style="padding:8px 0;color:#555"><strong>Days Requested</strong></td><td style="color:#c62828"><strong>−${leaveDaysCount} comp-off day${leaveDaysCount > 1 ? 's' : ''} will be deducted</strong></td></tr>`
       : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Days to Credit</strong></td><td style="color:#1565c0"><strong>+${workedDates.length} comp-off day${workedDates.length > 1 ? 's' : ''} to be banked</strong></td></tr>`;
 
-  const weekendRow = isUseBalance
-    ? '' // no weekend days worked for use_balance
+  const weekendRow = isUseBalance ? ''
     : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Weekend(s) Worked</strong></td><td style="color:#222">${workedFormatted}</td></tr>`;
 
-  const actionButtons = isLeave ? `
-    <div style="margin-top:30px">
-      <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">✅ Approve Leave</a>
-      <a href="${rejectUrl}"  style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">❌ Reject</a>
-    </div>` : `
-    <div style="margin-top:30px">
-      <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#1976d2;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">✅ Acknowledge & Bank Credit</a>
-      <a href="${rejectUrl}"  style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">❌ Reject</a>
-    </div>`;
+  const actionButtons = isLeave
+    ? `<div style="margin-top:30px">
+         <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">✅ Approve Leave</a>
+         <a href="${rejectUrl}"  style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">❌ Reject</a>
+       </div>`
+    : `<div style="margin-top:30px">
+         <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#1976d2;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">✅ Acknowledge & Bank Credit</a>
+         <a href="${rejectUrl}"  style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">❌ Reject</a>
+       </div>`;
 
   const html = `
     <div style="font-family:Segoe UI,sans-serif;max-width:600px;margin:auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px">
@@ -207,8 +271,7 @@ app.post('/api/submit', async (req, res) => {
       <p style="color:#888;font-size:13px;margin-bottom:24px">DPDzero — Data Support Team</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <tr><td style="padding:8px 0;color:#555;width:40%"><strong>Employee</strong></td><td style="color:#222">${employeeName}</td></tr>
-        ${weekendRow}
-        ${dateRow}
+        ${weekendRow}${dateRow}
         <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Work Done</strong></td><td style="color:#222">${reason}</td></tr>
       </table>
       ${actionButtons}
@@ -245,9 +308,9 @@ app.get('/api/action', async (req, res) => {
       row.status === 'approved' ? '#4caf50' : '#f44336'));
   }
 
-  // Store 'approved' or 'rejected' — NOT 'approve'/'reject'
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
   db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(newStatus, id);
+  backupToGitHub(); // fire-and-forget
 
   const workedFormatted  = formatDates(row.worked_dates);
   const isLeave          = row.request_type === 'take_leave' || row.request_type === 'use_balance';
@@ -259,6 +322,29 @@ app.get('/api/action', async (req, res) => {
 
   if (newStatus === 'approved') {
     const balAfter = getBalance(row.employee);
+
+    // Push to Google Sheet
+    if (isLeave) {
+      pushToSheet({
+        employee:    row.employee,
+        type:        isUseBalance ? 'Use Banked Leave' : 'Take Leave Now',
+        leaveDates:  compoffDates,
+        workedDates: parseDates(row.worked_dates),
+        reason:      row.reason,
+        approvedOn:  new Date().toISOString().split('T')[0],
+        balance:     balAfter.remaining,
+      });
+    } else {
+      pushToSheet({
+        employee:    row.employee,
+        type:        'Accumulate Credit',
+        leaveDates:  [],
+        workedDates: parseDates(row.worked_dates),
+        reason:      row.reason,
+        approvedOn:  new Date().toISOString().split('T')[0],
+        balance:     balAfter.remaining,
+      });
+    }
 
     const impactRow = isLeave
       ? `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Leave Dates</strong></td><td style="color:#222">${compoffFormatted}</td></tr>
@@ -347,4 +433,7 @@ function page(title, message, color) {
   </div></body></html>`;
 }
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ── Boot ──────────────────────────────────────────────────────────────────────
+restoreFromGitHub().then(() => {
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+});
