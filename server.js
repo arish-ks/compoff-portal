@@ -203,112 +203,314 @@ function getBalance(employee) {
   return { earned, used, remaining: earned - used };
 }
 
-// ── Google Sheets: ensure tab exists with headers ─────────────────────────────
-const SUMMARY_TAB  = '📋 All Leaves';
-const PURPLE       = { red: 0.404, green: 0.353, blue: 0.976 };
-const DARK_NAVY    = { red: 0, green: 0, blue: 0.165 };
-const WHITE        = { red: 1, green: 1, blue: 1 };
-const LIGHT_PURPLE = { red: 0.949, green: 0.941, blue: 1 };
-const LIGHT_GREEN  = { red: 0.91, green: 0.965, blue: 0.91 };
-const LIGHT_ORANGE = { red: 1, green: 0.953, blue: 0.878 };
+// ── Google Sheets ─────────────────────────────────────────────────────────────
+const SUMMARY_TAB = '📋 Leave Tracker';
 
-async function ensureTab(tabName, headers, titleBg, headerBg, headerFg) {
+// Color palette
+const C = {
+  purple:      { red: 0.404, green: 0.353, blue: 0.976 },   // #675AF9
+  purpleDark:  { red: 0.227, green: 0.196, blue: 0.698 },   // #3A32B2
+  purpleLight: { red: 0.933, green: 0.922, blue: 1.000 },   // #EEEBff
+  navy:        { red: 0.000, green: 0.000, blue: 0.165 },   // #00002A
+  white:       { red: 1.000, green: 1.000, blue: 1.000 },
+  offWhite:    { red: 0.976, green: 0.976, blue: 0.988 },   // #F9F9FC
+  accent:      { red: 0.659, green: 0.612, blue: 1.000 },   // #A89CFF
+  mintLight:   { red: 0.878, green: 0.973, blue: 0.941 },   // #E0F8F0
+  orangeLight: { red: 1.000, green: 0.945, blue: 0.851 },   // #FFF1D9
+  borderGray:  { red: 0.878, green: 0.878, blue: 0.910 },   // #E0E0E8
+  textDark:    { red: 0.133, green: 0.133, blue: 0.180 },   // #22222E
+  textMid:     { red: 0.400, green: 0.400, blue: 0.467 },   // #666677
+};
+
+const BORDER_STYLE = {
+  style: 'SOLID',
+  width: 1,
+  color: C.borderGray,
+};
+const THIN_BORDER = {
+  top: BORDER_STYLE, bottom: BORDER_STYLE,
+  left: BORDER_STYLE, right: BORDER_STYLE,
+};
+
+function cellFmt(bg, fg, bold = false, fontSize = 10, align = 'LEFT', wrap = true) {
+  return {
+    userEnteredFormat: {
+      backgroundColor: bg,
+      textFormat: { foregroundColor: fg, bold, fontSize, fontFamily: 'Arial' },
+      horizontalAlignment: align,
+      verticalAlignment: 'MIDDLE',
+      wrapStrategy: wrap ? 'WRAP' : 'CLIP',
+      borders: THIN_BORDER,
+      padding: { top: 6, bottom: 6, left: 10, right: 10 },
+    },
+  };
+}
+
+async function getSheetId(tabName) {
   const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-  const existing = meta.data.sheets.map(s => s.properties.title);
-  if (!existing.includes(tabName)) {
+  return meta.data.sheets.find(s => s.properties.title === tabName)?.properties.sheetId ?? null;
+}
+
+async function initSummaryTab() {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const exists = meta.data.sheets.some(s => s.properties.title === SUMMARY_TAB);
+
+  if (!exists) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SHEET_ID,
+      requestBody: { requests: [{ addSheet: { properties: { title: SUMMARY_TAB, index: 0 } } }] },
+    });
+  }
+
+  const sheetId = await getSheetId(SUMMARY_TAB);
+
+  // Write title + headers
+  await sheets.spreadsheets.values.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: [
+        {
+          range: `'${SUMMARY_TAB}'!A1:G1`,
+          values: [['DPDzero — Comp-Off Leave Tracker', '', '', '', '', '', '']],
+        },
+        {
+          range: `'${SUMMARY_TAB}'!A2:G2`,
+          values: [['Employee', 'Leave Type', 'Leave Date(s)', 'Days Taken', 'Reason', 'Approved On', 'Balance Left']],
+        },
+      ],
+    },
+  });
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      requests: [
+        // Merge title row
+        { mergeCells: { range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 7 }, mergeType: 'MERGE_ALL' } },
+        // Title row format
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 7 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: C.purple,
+                textFormat: { foregroundColor: C.white, bold: true, fontSize: 14, fontFamily: 'Arial' },
+                horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE',
+                padding: { top: 14, bottom: 14, left: 10, right: 10 },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,padding)',
+          },
+        },
+        // Header row format
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 7 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: C.purpleDark,
+                textFormat: { foregroundColor: C.white, bold: true, fontSize: 11, fontFamily: 'Arial' },
+                horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE',
+                borders: THIN_BORDER,
+                padding: { top: 8, bottom: 8, left: 10, right: 10 },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,borders,padding)',
+          },
+        },
+        // Freeze 2 rows
+        { updateSheetProperties: { properties: { sheetId, gridProperties: { frozenRowCount: 2 } }, fields: 'gridProperties.frozenRowCount' } },
+        // Column widths: Employee, Type, Dates, Days, Reason, Approved, Balance
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 130 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 1, endIndex: 2 }, properties: { pixelSize: 150 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 2, endIndex: 3 }, properties: { pixelSize: 180 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 3, endIndex: 4 }, properties: { pixelSize: 90 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 4, endIndex: 5 }, properties: { pixelSize: 260 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 5, endIndex: 6 }, properties: { pixelSize: 120 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 6, endIndex: 7 }, properties: { pixelSize: 110 }, fields: 'pixelSize' } },
+        // Row heights
+        { updateDimensionProperties: { range: { sheetId, dimension: 'ROWS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 50 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'ROWS', startIndex: 1, endIndex: 2 }, properties: { pixelSize: 36 }, fields: 'pixelSize' } },
+      ],
+    },
+  });
+}
+
+async function initEmployeeTab(tabName, employeeName) {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
+  const exists = meta.data.sheets.some(s => s.properties.title === tabName);
+
+  if (!exists) {
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId: SHEET_ID,
       requestBody: { requests: [{ addSheet: { properties: { title: tabName } } }] },
     });
-    // Write title + header rows
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: SHEET_ID, range: `'${tabName}'!A1`,
-      valueInputOption: 'RAW',
-      requestBody: { values: [headers] },
-    });
-    // Format header row
-    const sheetMeta = (await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID })).data.sheets;
-    const sheetId = sheetMeta.find(s => s.properties.title === tabName).properties.sheetId;
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SHEET_ID,
-      requestBody: {
-        requests: [
-          {
-            repeatCell: {
-              range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
-              cell: {
-                userEnteredFormat: {
-                  backgroundColor: headerBg,
-                  textFormat: { foregroundColor: headerFg, bold: true, fontSize: 11 },
-                  horizontalAlignment: 'CENTER',
-                },
-              },
-              fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment)',
-            },
-          },
-          { updateSheetProperties: { properties: { sheetId, gridProperties: { frozenRowCount: 1 } }, fields: 'gridProperties.frozenRowCount' } },
-          { autoResizeDimensions: { dimensions: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: headers.length } } },
-        ],
-      },
-    });
   }
-}
 
-async function appendToSheet(tabName, row, rowBg) {
-  await sheets.spreadsheets.values.append({
+  const sheetId = await getSheetId(tabName);
+
+  await sheets.spreadsheets.values.batchUpdate({
     spreadsheetId: SHEET_ID,
-    range: `'${tabName}'!A1`,
-    valueInputOption: 'RAW',
-    insertDataOption: 'INSERT_ROWS',
-    requestBody: { values: [row] },
+    requestBody: {
+      valueInputOption: 'RAW',
+      data: [
+        {
+          range: `'${tabName}'!A1:F1`,
+          values: [[`Comp-Off Leave History — ${employeeName}`, '', '', '', '', '']],
+        },
+        {
+          range: `'${tabName}'!A2:F2`,
+          values: [['Leave Type', 'Leave Date(s)', 'Days Taken', 'Reason', 'Approved On', 'Balance Left']],
+        },
+      ],
+    },
   });
-  // Colour the row
-  const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-  const sheetId = meta.data.sheets.find(s => s.properties.title === tabName).properties.sheetId;
-  const lastRow = (await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `'${tabName}'!A:A` })).data.values?.length || 1;
+
   await sheets.spreadsheets.batchUpdate({
     spreadsheetId: SHEET_ID,
     requestBody: {
-      requests: [{
-        repeatCell: {
-          range: { sheetId, startRowIndex: lastRow - 1, endRowIndex: lastRow },
-          cell: { userEnteredFormat: { backgroundColor: rowBg } },
-          fields: 'userEnteredFormat.backgroundColor',
+      requests: [
+        { mergeCells: { range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 6 }, mergeType: 'MERGE_ALL' } },
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: 0, endRowIndex: 1, startColumnIndex: 0, endColumnIndex: 6 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: C.navy,
+                textFormat: { foregroundColor: C.accent, bold: true, fontSize: 14, fontFamily: 'Arial' },
+                horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE',
+                padding: { top: 14, bottom: 14, left: 10, right: 10 },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,padding)',
+          },
         },
-      }],
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: 1, endRowIndex: 2, startColumnIndex: 0, endColumnIndex: 6 },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: C.purple,
+                textFormat: { foregroundColor: C.white, bold: true, fontSize: 11, fontFamily: 'Arial' },
+                horizontalAlignment: 'CENTER', verticalAlignment: 'MIDDLE',
+                borders: THIN_BORDER,
+                padding: { top: 8, bottom: 8, left: 10, right: 10 },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,borders,padding)',
+          },
+        },
+        { updateSheetProperties: { properties: { sheetId, gridProperties: { frozenRowCount: 2 } }, fields: 'gridProperties.frozenRowCount' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 160 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 1, endIndex: 2 }, properties: { pixelSize: 180 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 2, endIndex: 3 }, properties: { pixelSize: 90 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 3, endIndex: 4 }, properties: { pixelSize: 280 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 4, endIndex: 5 }, properties: { pixelSize: 120 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'COLUMNS', startIndex: 5, endIndex: 6 }, properties: { pixelSize: 110 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'ROWS', startIndex: 0, endIndex: 1 }, properties: { pixelSize: 50 }, fields: 'pixelSize' } },
+        { updateDimensionProperties: { range: { sheetId, dimension: 'ROWS', startIndex: 1, endIndex: 2 }, properties: { pixelSize: 36 }, fields: 'pixelSize' } },
+      ],
+    },
+  });
+}
+
+async function appendLeaveRow(tabName, rowValues, isSummary, rowBg) {
+  // Append values
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SHEET_ID,
+    range: `'${tabName}'!A3`,
+    valueInputOption: 'RAW',
+    insertDataOption: 'INSERT_ROWS',
+    requestBody: { values: [rowValues] },
+  });
+
+  const sheetId = await getSheetId(tabName);
+  const colCount = rowValues.length;
+  const allVals = await sheets.spreadsheets.values.get({ spreadsheetId: SHEET_ID, range: `'${tabName}'!A:A` });
+  const lastRow = (allVals.data.values || []).length;
+  const isEven  = (lastRow - 2) % 2 === 0; // alternating from row 3
+  const altBg   = isEven ? C.offWhite : C.white;
+  const finalBg = rowBg || altBg;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: SHEET_ID,
+    requestBody: {
+      requests: [
+        // Background + text format for whole row
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: lastRow - 1, endRowIndex: lastRow, startColumnIndex: 0, endColumnIndex: colCount },
+            cell: {
+              userEnteredFormat: {
+                backgroundColor: finalBg,
+                textFormat: { foregroundColor: C.textDark, fontSize: 10, fontFamily: 'Arial' },
+                verticalAlignment: 'MIDDLE',
+                wrapStrategy: 'WRAP',
+                borders: THIN_BORDER,
+                padding: { top: 6, bottom: 6, left: 10, right: 10 },
+              },
+            },
+            fields: 'userEnteredFormat(backgroundColor,textFormat,verticalAlignment,wrapStrategy,borders,padding)',
+          },
+        },
+        // Bold employee/type in col A
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: lastRow - 1, endRowIndex: lastRow, startColumnIndex: 0, endColumnIndex: 1 },
+            cell: { userEnteredFormat: { textFormat: { bold: true, fontSize: 10, fontFamily: 'Arial', foregroundColor: C.textDark } } },
+            fields: 'userEnteredFormat.textFormat',
+          },
+        },
+        // Days col center-aligned + bold
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: lastRow - 1, endRowIndex: lastRow, startColumnIndex: isSummary ? 3 : 2, endColumnIndex: isSummary ? 4 : 3 },
+            cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', textFormat: { bold: true, fontSize: 11, foregroundColor: C.purple, fontFamily: 'Arial' } } },
+            fields: 'userEnteredFormat(horizontalAlignment,textFormat)',
+          },
+        },
+        // Balance col center-aligned
+        {
+          repeatCell: {
+            range: { sheetId, startRowIndex: lastRow - 1, endRowIndex: lastRow, startColumnIndex: colCount - 1, endColumnIndex: colCount },
+            cell: { userEnteredFormat: { horizontalAlignment: 'CENTER', textFormat: { bold: true, fontSize: 10, fontFamily: 'Arial', foregroundColor: C.purpleDark } } },
+            fields: 'userEnteredFormat(horizontalAlignment,textFormat)',
+          },
+        },
+        // Row height
+        { updateDimensionProperties: { range: { sheetId, dimension: 'ROWS', startIndex: lastRow - 1, endIndex: lastRow }, properties: { pixelSize: 44 }, fields: 'pixelSize' } },
+      ],
     },
   });
 }
 
 async function pushToSheet(data) {
   if (!process.env.GOOGLE_REFRESH_TOKEN) return;
+  // Only leaves go to the sheet
+  if (data.type === 'Accumulate Credit') return;
+
   try {
-    const leaveDates  = (data.leaveDates  || []).map(d => formatDateShort(d)).join('\n') || '—';
-    const workedDates = (data.workedDates || []).map(d => formatDateShort(d)).join('\n') || '—';
-    const days = data.leaveDates?.length || data.workedDates?.length || 0;
-    const isLeave = data.type !== 'Accumulate Credit';
-    const rowBg = data.type === 'Accumulate Credit' ? LIGHT_GREEN
-                : data.type === 'Use Banked Leave'  ? LIGHT_ORANGE
-                : LIGHT_PURPLE;
+    const leaveDates = (data.leaveDates || []).map(d => formatDateShort(d)).join('\n') || '—';
+    const days       = data.leaveDates?.length || 0;
+    const rowBg      = data.type === 'Use Banked Leave' ? C.mintLight : C.purpleLight;
 
-    // Summary tab
-    const summaryHeaders = ['Employee', 'Type', 'Leave Date(s)', 'Weekend(s) Worked', 'Days', 'Reason', 'Approved On', 'Balance After'];
-    await ensureTab(SUMMARY_TAB, summaryHeaders, PURPLE, PURPLE, WHITE);
-    await appendToSheet(SUMMARY_TAB,
-      [data.employee, data.type, leaveDates, workedDates, days, data.reason, data.approvedOn, `${data.balance} day(s)`],
-      rowBg
+    // ── Summary tab ──
+    await initSummaryTab();
+    await appendLeaveRow(SUMMARY_TAB,
+      [data.employee, data.type, leaveDates, days, data.reason, data.approvedOn, `${data.balance} day(s)`],
+      true, rowBg
     );
 
-    // Per-employee tab
+    // ── Per-employee tab ──
     const empTab = `👤 ${data.employee}`;
-    const empHeaders = ['Type', 'Leave Date(s)', 'Weekend(s) Worked', 'Days', 'Reason', 'Approved On', 'Balance After'];
-    await ensureTab(empTab, empHeaders, DARK_NAVY, DARK_NAVY, { red: 0.659, green: 0.612, blue: 1 });
-    await appendToSheet(empTab,
-      [data.type, leaveDates, workedDates, days, data.reason, data.approvedOn, `${data.balance} day(s)`],
-      rowBg
+    await initEmployeeTab(empTab, data.employee);
+    await appendLeaveRow(empTab,
+      [data.type, leaveDates, days, data.reason, data.approvedOn, `${data.balance} day(s)`],
+      false, rowBg
     );
 
-    console.log(`Sheet updated for ${data.employee}`);
+    console.log(`✅ Sheet updated for ${data.employee}`);
   } catch (e) { console.error('Sheets error:', e.message); }
 }
 
@@ -515,16 +717,17 @@ app.get('/api/action', async (req, res) => {
   if (newStatus === 'approved') {
     const balAfter = getBalance(row.employee);
 
-    // Push to Google Sheet (fire-and-forget)
-    pushToSheet({
-      employee:    row.employee,
-      type:        isUseBalance ? 'Use Banked Leave' : isLeave ? 'Take Leave Now' : 'Accumulate Credit',
-      leaveDates:  compoffDates,
-      workedDates: parseDates(row.worked_dates),
-      reason:      row.reason,
-      approvedOn:  new Date().toISOString().split('T')[0],
-      balance:     balAfter.remaining,
-    });
+    // Push to Google Sheet — leaves only (fire-and-forget)
+    if (isLeave) {
+      pushToSheet({
+        employee:   row.employee,
+        type:       isUseBalance ? 'Use Banked Leave' : 'Take Leave Now',
+        leaveDates: compoffDates,
+        reason:     row.reason,
+        approvedOn: new Date().toISOString().split('T')[0],
+        balance:    balAfter.remaining,
+      });
+    }
 
     const impactRow = isLeave
       ? `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Leave Dates</strong></td><td style="color:#222">${compoffFormatted}</td></tr>
