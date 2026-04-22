@@ -848,57 +848,6 @@ function page(title, message, color) {
   </div></body></html>`;
 }
 
-// ── TEMP: Admin reset (delete after use) ─────────────────────────────────────
-app.post('/api/admin/reset-all-data', async (req, res) => {
-  try {
-    // 1. Wipe SQLite
-    db.prepare('DELETE FROM requests').run();
-    console.log('DB wiped');
-
-    // 2. Wipe GitHub backup
-    await backupToGitHub();
-    console.log('GitHub backup cleared');
-
-    // 3. Wipe Google Sheet - delete all non-first sheets, clear first sheet
-    if (process.env.GOOGLE_REFRESH_TOKEN) {
-      const meta = await sheets.spreadsheets.get({ spreadsheetId: SHEET_ID });
-      const allSheets = meta.data.sheets;
-
-      // Delete all sheets except the first one (can't delete the only sheet)
-      const deleteRequests = allSheets.slice(1).map(s => ({
-        deleteSheet: { sheetId: s.properties.sheetId }
-      }));
-      if (deleteRequests.length > 0) {
-        await sheets.spreadsheets.batchUpdate({
-          spreadsheetId: SHEET_ID,
-          requestBody: { requests: deleteRequests }
-        });
-      }
-
-      // Clear and reset the first sheet
-      const firstSheetTitle = allSheets[0].properties.title;
-      await sheets.spreadsheets.values.clear({
-        spreadsheetId: SHEET_ID,
-        range: firstSheetTitle,
-      });
-      // Rename to default
-      await sheets.spreadsheets.batchUpdate({
-        spreadsheetId: SHEET_ID,
-        requestBody: { requests: [{ updateSheetProperties: {
-          properties: { sheetId: allSheets[0].properties.sheetId, title: '📋 Leave Tracker' },
-          fields: 'title'
-        }}]}
-      });
-      console.log('Google Sheet wiped');
-    }
-
-    res.json({ ok: true, message: 'All data cleared' });
-  } catch (err) {
-    console.error('Reset error:', err);
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
 // ── Boot ──────────────────────────────────────────────────────────────────────
 restoreFromGitHub().then(() => {
   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
