@@ -49,6 +49,16 @@
       "reason": "taking Leave",
       "status": "approved",
       "created_at": "2026-04-22 11:25:25"
+    },
+    {
+      "id": "a65113b3-2a9f-49af-b8b7-0c1040c3a6b5",
+      "employee": "Aravind",
+      "worked_dates": "[\"2026-04-05\",\"2026-04-12\"]",
+      "request_type": "take_leave",
+      "compoff_dates": "[\"2026-04-23\",\"2026-04-30\"]",
+      "reason": "dhfjs",
+      "status": "pending",
+      "created_at": "2026-04-22 11:26:34"
     }
   ]
 }
