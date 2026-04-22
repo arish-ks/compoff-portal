@@ -19,6 +19,16 @@
       "reason": "im on leave",
       "status": "approved",
       "created_at": "2026-04-22 11:04:14"
+    },
+    {
+      "id": "85e2f153-fa44-4dc8-9b67-7994750f1d70",
+      "employee": "Arish",
+      "worked_dates": "[\"2026-04-11\",\"2026-04-12\",\"2026-04-19\"]",
+      "request_type": "accumulate",
+      "compoff_dates": null,
+      "reason": "im banking my compoffs",
+      "status": "pending",
+      "created_at": "2026-04-22 11:05:40"
     }
   ]
 }
