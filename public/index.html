@@ -690,8 +690,28 @@
           <div class="pills-grid" id="pillContainer"></div>
         </div>
 
-        <!-- Section 3: Comp-off date -->
+        <!-- Section 3: Request type -->
         <div class="form-section">
+          <div class="section-header">
+            <div class="section-icon mint">⚡</div>
+            <div>
+              <div class="section-title">What would you like to do?</div>
+              <div class="section-subtitle">Take leave now or save the credit for later</div>
+            </div>
+          </div>
+          <label for="requestType">Request Type</label>
+          <select id="requestType" name="requestType" required onchange="onRequestTypeChange()">
+            <option value="" disabled selected>Select an option...</option>
+            <option value="take_leave">🏖️ Take Comp-Off Leave Now — I want to apply for a specific date</option>
+            <option value="accumulate">🏦 Accumulate Credit — Just bank it, I'll use it later</option>
+          </select>
+
+          <!-- Info box — changes based on selection -->
+          <div id="typeInfoBox" style="display:none;margin-top:12px;padding:12px 14px;border-radius:10px;font-size:12px;font-family:'Inter',sans-serif;line-height:1.6;border:1px solid"></div>
+        </div>
+
+        <!-- Section 4: Comp-off date (only shown if take_leave) -->
+        <div class="form-section" id="leaveDateSection" style="display:none">
           <div class="section-header">
             <div class="section-icon mint">🏖️</div>
             <div>
@@ -700,7 +720,7 @@
             </div>
           </div>
           <label for="compoffDate">Preferred Leave Date</label>
-          <input type="date" id="compoffDate" name="compoffDate" required />
+          <input type="date" id="compoffDate" name="compoffDate" />
         </div>
 
         <!-- Section 4: Reason -->
@@ -726,7 +746,7 @@
           </button>
           <div class="submit-hint">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4.5" stroke="rgba(255,255,255,0.25)"/><path d="M5 4V6M5 7V7.5" stroke="rgba(255,255,255,0.25)" stroke-linecap="round"/></svg>
-            Your request will go to Sandeep for approval. HR is notified only after approval.
+            <span id="submitHintText">Your request will go to Sandeep for approval. HR is notified only after approval.</span>
           </div>
         </div>
 
@@ -814,16 +834,51 @@
   const compoffInput = document.getElementById('compoffDate');
   compoffInput.min = new Date().toISOString().split('T')[0];
 
+  // ── Request type toggle ──
+  function onRequestTypeChange() {
+    const type = document.getElementById('requestType').value;
+    const leaveDateSection = document.getElementById('leaveDateSection');
+    const infoBox = document.getElementById('typeInfoBox');
+    const compoff = document.getElementById('compoffDate');
+    const hint = document.getElementById('submitHintText');
+    const btnContent = document.getElementById('btnContent');
+
+    if (type === 'take_leave') {
+      leaveDateSection.style.display = 'block';
+      compoff.required = true;
+      infoBox.style.display = 'block';
+      infoBox.style.background = 'rgba(8,202,151,0.08)';
+      infoBox.style.borderColor = 'rgba(8,202,151,0.25)';
+      infoBox.style.color = 'rgba(255,255,255,0.6)';
+      infoBox.innerHTML = '<strong style="color:#6BDFC1">Taking leave now</strong> — Sandeep will receive an approval email with your chosen date. Once approved, HR is notified and your leave is recorded.';
+      hint.textContent = 'Your leave request will go to Sandeep for approval. HR is notified only after approval.';
+      btnContent.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 8M9 3L14 8L9 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Request Leave';
+    } else if (type === 'accumulate') {
+      leaveDateSection.style.display = 'none';
+      compoff.required = false;
+      compoff.value = '';
+      infoBox.style.display = 'block';
+      infoBox.style.background = 'rgba(92,170,250,0.08)';
+      infoBox.style.borderColor = 'rgba(92,170,250,0.25)';
+      infoBox.style.color = 'rgba(255,255,255,0.6)';
+      infoBox.innerHTML = '<strong style="color:#8AC1FA">Banking credit</strong> — No leave date needed. Sandeep will be notified that you\'ve worked on these days and your comp-off credit will be recorded for future use.';
+      hint.textContent = 'Sandeep will be notified to acknowledge your weekend work. You can use this credit anytime later.';
+      btnContent.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v12M3 7l5-5 5 5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Bank Comp-Off Credit';
+    }
+    updateSteps();
+  }
+
   // ── Steps animation ──
   function updateSteps() {
     const name = document.getElementById('employeeName').value;
     const hasDates = selectedDates.size > 0;
-    const hasCompoff = compoffInput.value;
+    const type = document.getElementById('requestType').value;
+    const hasCompoff = type === 'accumulate' ? true : compoffInput.value;
     const hasReason = document.getElementById('reason').value.trim().length > 0;
 
     setStep(1, name ? 'done' : 'active');
     setStep(2, hasDates ? 'done' : (name ? 'active' : 'inactive'));
-    setStep(3, (hasDates && hasCompoff && hasReason) ? 'active' : 'inactive');
+    setStep(3, (hasDates && type && hasCompoff && hasReason) ? 'active' : 'inactive');
   }
 
   function setStep(n, state) {
@@ -832,6 +887,7 @@
   }
 
   document.getElementById('employeeName').addEventListener('change', updateSteps);
+  document.getElementById('requestType').addEventListener('change', updateSteps);
   document.getElementById('compoffDate').addEventListener('change', updateSteps);
   document.getElementById('reason').addEventListener('input', updateSteps);
 
@@ -844,6 +900,17 @@
       return;
     }
 
+    const requestType = document.getElementById('requestType').value;
+    if (!requestType) {
+      showToast('Please select what you would like to do — take leave or accumulate credit.', 'error');
+      return;
+    }
+
+    if (requestType === 'take_leave' && !compoffInput.value) {
+      showToast('Please select your preferred comp-off date.', 'error');
+      return;
+    }
+
     const btn = document.getElementById('submitBtn');
     const btnContent = document.getElementById('btnContent');
     btn.disabled = true;
@@ -852,7 +919,8 @@
     const payload = {
       employeeName: document.getElementById('employeeName').value,
       workedDates: Array.from(selectedDates),
-      compoffDate: compoffInput.value,
+      requestType,
+      compoffDate: requestType === 'take_leave' ? compoffInput.value : null,
       reason: document.getElementById('reason').value,
     };
 
@@ -864,11 +932,19 @@
       });
       const data = await res.json();
       if (res.ok) {
-        showToast('Request sent! Sandeep will receive an approval email shortly.', 'success');
+        const msg = requestType === 'accumulate'
+          ? 'Credit banked! Sandeep has been notified about your weekend work.'
+          : 'Leave request sent! Sandeep will receive an approval email shortly.';
+        showToast(msg, 'success');
         e.target.reset();
         selectedDates.clear();
         document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
         updateSelectionUI();
+        document.getElementById('leaveDateSection').style.display = 'none';
+        document.getElementById('typeInfoBox').style.display = 'none';
+        const defaultBtn = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 8L14 8M9 3L14 8L9 13" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Send Request to Manager';
+        document.getElementById('btnContent').innerHTML = defaultBtn;
+        document.getElementById('submitHintText').textContent = 'Your request will go to Sandeep for approval. HR is notified only after approval.';
         updateSteps();
       } else {
         showToast(data.error || 'Something went wrong. Please try again.', 'error');

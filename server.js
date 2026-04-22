@@ -13,13 +13,14 @@ const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const db = new Database('compoff.db');
 db.exec(`
   CREATE TABLE IF NOT EXISTS requests (
-    id          TEXT PRIMARY KEY,
-    employee    TEXT NOT NULL,
+    id           TEXT PRIMARY KEY,
+    employee     TEXT NOT NULL,
     worked_dates TEXT NOT NULL,
-    compoff_date TEXT NOT NULL,
-    reason      TEXT NOT NULL,
-    status      TEXT DEFAULT 'pending',
-    created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    request_type TEXT NOT NULL DEFAULT 'take_leave',
+    compoff_date TEXT,
+    reason       TEXT NOT NULL,
+    status       TEXT DEFAULT 'pending',
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 
@@ -54,47 +55,66 @@ function formatSingle(dateStr) {
 
 // Submit comp-off request
 app.post('/api/submit', async (req, res) => {
-  const { employeeName, workedDates, compoffDate, reason } = req.body;
+  const { employeeName, workedDates, requestType, compoffDate, reason } = req.body;
 
-  if (!employeeName || !workedDates?.length || !compoffDate || !reason) {
+  if (!employeeName || !workedDates?.length || !requestType || !reason) {
     return res.status(400).json({ error: 'All fields are required.' });
+  }
+  if (requestType === 'take_leave' && !compoffDate) {
+    return res.status(400).json({ error: 'Please select a comp-off date.' });
   }
 
   const id = uuidv4();
 
   db.prepare(`
-    INSERT INTO requests (id, employee, worked_dates, compoff_date, reason)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, employeeName, JSON.stringify(workedDates), compoffDate, reason);
+    INSERT INTO requests (id, employee, worked_dates, request_type, compoff_date, reason)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, employeeName, JSON.stringify(workedDates), requestType, compoffDate || null, reason);
+
+  const workedFormatted = formatDates(JSON.stringify(workedDates));
+  const isLeave         = requestType === 'take_leave';
+  const compoffFormatted = isLeave ? formatSingle(compoffDate) : null;
 
   const approveUrl = `${BASE_URL}/api/action?id=${id}&action=approve`;
   const rejectUrl  = `${BASE_URL}/api/action?id=${id}&action=reject`;
 
-  const workedFormatted  = formatDates(JSON.stringify(workedDates));
-  const compoffFormatted = formatSingle(compoffDate);
+  // ── Email differs based on request type ──
+  const typeLabel  = isLeave
+    ? `<span style="display:inline-block;padding:3px 10px;background:#e8f5e9;color:#2e7d32;border-radius:20px;font-size:12px;font-weight:600">🏖️ Leave Request</span>`
+    : `<span style="display:inline-block;padding:3px 10px;background:#e3f2fd;color:#1565c0;border-radius:20px;font-size:12px;font-weight:600">🏦 Accumulate Credit</span>`;
+
+  const dateRow = isLeave
+    ? `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Comp-Off Date</strong></td><td style="color:#222">${compoffFormatted}</td></tr>`
+    : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Credit Status</strong></td><td style="color:#1565c0"><strong>To be banked — no leave date selected</strong></td></tr>`;
+
+  const actionButtons = isLeave ? `
+      <div style="margin-top:30px">
+        <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">✅ Approve Leave</a>
+        <a href="${rejectUrl}"  style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">❌ Reject</a>
+      </div>` : `
+      <div style="margin-top:30px">
+        <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#1976d2;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">✅ Acknowledge & Bank Credit</a>
+        <a href="${rejectUrl}"  style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">❌ Reject</a>
+      </div>`;
 
   const html = `
     <div style="font-family:Segoe UI,sans-serif;max-width:600px;margin:auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px">
-      <h2 style="color:#1a1a2e;margin-bottom:4px">Comp-Off Request</h2>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <h2 style="color:#1a1a2e;margin:0">Comp-Off Request</h2>
+        ${typeLabel}
+      </div>
       <p style="color:#888;font-size:13px;margin-bottom:24px">DPDzero — Data Support Team</p>
 
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <tr><td style="padding:8px 0;color:#555;width:40%"><strong>Employee</strong></td><td style="color:#222">${employeeName}</td></tr>
         <tr><td style="padding:8px 0;color:#555"><strong>Weekend(s) Worked</strong></td><td style="color:#222">${workedFormatted}</td></tr>
-        <tr><td style="padding:8px 0;color:#555"><strong>Comp-Off Requested On</strong></td><td style="color:#222">${compoffFormatted}</td></tr>
-        <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Reason</strong></td><td style="color:#222">${reason}</td></tr>
+        ${dateRow}
+        <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Reason / Work Done</strong></td><td style="color:#222">${reason}</td></tr>
       </table>
 
-      <div style="margin-top:30px;display:flex;gap:12px">
-        <a href="${approveUrl}" style="display:inline-block;padding:12px 28px;background:#4caf50;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;margin-right:12px">
-          ✅ Approve
-        </a>
-        <a href="${rejectUrl}" style="display:inline-block;padding:12px 28px;background:#f44336;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px">
-          ❌ Reject
-        </a>
-      </div>
+      ${actionButtons}
 
-      <p style="margin-top:24px;font-size:12px;color:#aaa">This request was submitted via the DPDzero Comp-Off Portal.</p>
+      <p style="margin-top:24px;font-size:12px;color:#aaa">Submitted via DPDzero Comp-Off Portal.</p>
     </div>
   `;
 
@@ -102,7 +122,9 @@ app.post('/api/submit', async (req, res) => {
     await transporter.sendMail({
       from: `"DPDzero Comp-Off Portal" <${process.env.GMAIL_USER}>`,
       to: 'arish@dpdzero.com',
-      subject: `Comp-Off Request from ${employeeName} — ${compoffFormatted}`,
+      subject: isLeave
+        ? `🏖️ Leave Request: ${employeeName} — ${compoffFormatted}`
+        : `🏦 Comp-Off Credit: ${employeeName} worked on ${workedFormatted}`,
       html,
     });
     res.json({ success: true });
@@ -129,28 +151,31 @@ app.get('/api/action', async (req, res) => {
 
   db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(action, id);
 
-  const workedFormatted  = formatDates(row.worked_dates);
-  const compoffFormatted = formatSingle(row.compoff_date);
+  const workedFormatted = formatDates(row.worked_dates);
+  const isLeave         = row.request_type === 'take_leave';
+  const compoffFormatted = isLeave && row.compoff_date ? formatSingle(row.compoff_date) : null;
 
   if (action === 'approve') {
-    // Send confirmation to HR
+    const dateRow = isLeave
+      ? `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Comp-Off Leave Date</strong></td><td style="color:#222">${compoffFormatted}</td></tr>`
+      : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Credit Status</strong></td><td style="color:#1565c0"><strong>Comp-Off credit banked ✓</strong></td></tr>`;
+
     const hrHtml = `
       <div style="font-family:Segoe UI,sans-serif;max-width:600px;margin:auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px">
-        <h2 style="color:#2e7d32;margin-bottom:4px">✅ Comp-Off Approved</h2>
+        <h2 style="color:#2e7d32;margin-bottom:4px">${isLeave ? '✅ Comp-Off Leave Approved' : '🏦 Comp-Off Credit Banked'}</h2>
         <p style="color:#888;font-size:13px;margin-bottom:24px">DPDzero — Data Support Team</p>
-
         <p style="font-size:14px;color:#333;margin-bottom:20px">
-          The following comp-off request has been <strong style="color:#2e7d32">approved by Sandeep</strong>.
+          ${isLeave
+            ? `The following comp-off leave has been <strong style="color:#2e7d32">approved by Sandeep</strong>.`
+            : `Weekend work by <strong>${row.employee}</strong> has been <strong style="color:#1565c0">acknowledged by Sandeep</strong>. Comp-off credit has been banked.`}
         </p>
-
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <tr><td style="padding:8px 0;color:#555;width:40%"><strong>Employee</strong></td><td style="color:#222">${row.employee}</td></tr>
           <tr><td style="padding:8px 0;color:#555"><strong>Weekend(s) Worked</strong></td><td style="color:#222">${workedFormatted}</td></tr>
-          <tr><td style="padding:8px 0;color:#555"><strong>Comp-Off Date</strong></td><td style="color:#222">${compoffFormatted}</td></tr>
-          <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Reason</strong></td><td style="color:#222">${row.reason}</td></tr>
+          ${dateRow}
+          <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Work Done</strong></td><td style="color:#222">${row.reason}</td></tr>
           <tr><td style="padding:8px 0;color:#555"><strong>Approved By</strong></td><td style="color:#222">Sandeep</td></tr>
         </table>
-
         <p style="margin-top:24px;font-size:12px;color:#aaa">Please update the attendance system accordingly.</p>
       </div>
     `;
@@ -159,7 +184,9 @@ app.get('/api/action', async (req, res) => {
       await transporter.sendMail({
         from: `"DPDzero Comp-Off Portal" <${process.env.GMAIL_USER}>`,
         to: 'arish@dpdzero.com',
-        subject: `Comp-Off Approved: ${row.employee} — ${compoffFormatted}`,
+        subject: isLeave
+          ? `✅ Leave Approved: ${row.employee} — ${compoffFormatted}`
+          : `🏦 Credit Banked: ${row.employee} comp-off credit acknowledged`,
         html: hrHtml,
       });
     } catch (err) {
@@ -167,8 +194,10 @@ app.get('/api/action', async (req, res) => {
     }
 
     return res.send(page(
-      'Approved!',
-      `Comp-off for <strong>${row.employee}</strong> on <strong>${compoffFormatted}</strong> has been approved. HR team has been notified.`,
+      isLeave ? 'Leave Approved!' : 'Credit Banked!',
+      isLeave
+        ? `Comp-off leave for <strong>${row.employee}</strong> on <strong>${compoffFormatted}</strong> has been approved. HR team has been notified.`
+        : `Weekend work by <strong>${row.employee}</strong> has been acknowledged. Comp-off credit has been banked. HR team has been notified.`,
       '#4caf50'
     ));
   } else {
