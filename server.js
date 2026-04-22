@@ -78,11 +78,11 @@ function formatDateShort(dateStr) {
 // ── Balance helper ────────────────────────────────────────────────────────────
 function getBalance(employee) {
   const all = db.prepare(`SELECT * FROM requests WHERE employee = ? AND status = 'approved'`).all(employee);
+  // Credits earned = worked_dates from ALL approved requests (both accumulate and take_leave)
   const earned = all
-    .filter(r => r.request_type === 'accumulate')
     .reduce((s, r) => s + parseDates(r.worked_dates).length, 0);
   const used = all
-    .filter(r => r.request_type === 'take_leave')
+    .filter(r => r.request_type === 'take_leave' || r.request_type === 'use_balance')
     .reduce((s, r) => s + parseDates(r.compoff_dates).length, 0);
   return { earned, used, remaining: earned - used };
 }
@@ -127,19 +127,29 @@ app.get('/api/balance/:employee', (req, res) => {
 app.post('/api/submit', async (req, res) => {
   const { employeeName, workedDates, requestType, compoffDates, reason } = req.body;
 
-  if (!employeeName || !workedDates?.length || !requestType || !reason) {
+  if (!employeeName || !requestType || !reason) {
     return res.status(400).json({ error: 'All fields are required.' });
   }
-  if (requestType === 'take_leave' && !compoffDates?.length) {
+  if (requestType !== 'use_balance' && !workedDates?.length) {
+    return res.status(400).json({ error: 'Please select at least one weekend day worked.' });
+  }
+  if ((requestType === 'take_leave' || requestType === 'use_balance') && !compoffDates?.length) {
     return res.status(400).json({ error: 'Please select at least one leave date.' });
   }
 
-  // Check balance if taking leave
+  // Validate leave count against available credits
   if (requestType === 'take_leave') {
+    if (compoffDates.length > workedDates.length) {
+      return res.status(400).json({
+        error: `You selected ${workedDates.length} weekend day${workedDates.length !== 1 ? 's' : ''} worked but requested ${compoffDates.length} leave day${compoffDates.length !== 1 ? 's' : ''}. You can only take up to ${workedDates.length}.`
+      });
+    }
+  }
+  if (requestType === 'use_balance') {
     const bal = getBalance(employeeName);
     if (compoffDates.length > bal.remaining) {
       return res.status(400).json({
-        error: `You only have ${bal.remaining} comp-off day${bal.remaining !== 1 ? 's' : ''} available. You selected ${compoffDates.length}.`
+        error: `You only have ${bal.remaining} banked day${bal.remaining !== 1 ? 's' : ''} available. You requested ${compoffDates.length}.`
       });
     }
   }
@@ -148,11 +158,12 @@ app.post('/api/submit', async (req, res) => {
   db.prepare(`
     INSERT INTO requests (id, employee, worked_dates, request_type, compoff_dates, reason)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(id, employeeName, JSON.stringify(workedDates), requestType,
-         requestType === 'take_leave' ? JSON.stringify(compoffDates) : null, reason);
+  `).run(id, employeeName, JSON.stringify(workedDates || []), requestType,
+         (requestType === 'take_leave' || requestType === 'use_balance') ? JSON.stringify(compoffDates) : null, reason);
 
-  const workedFormatted   = formatDates(JSON.stringify(workedDates));
-  const isLeave           = requestType === 'take_leave';
+  const workedFormatted   = workedDates?.length ? formatDates(JSON.stringify(workedDates)) : '—';
+  const isLeave           = requestType === 'take_leave' || requestType === 'use_balance';
+  const isUseBalance      = requestType === 'use_balance';
   const leaveDaysCount    = isLeave ? compoffDates.length : 0;
   const compoffFormatted  = isLeave ? compoffDates.map(d => formatSingle(d)).join('<br>') : null;
   const compoffShort      = isLeave ? compoffDates.map(d => formatDateShort(d)).join(', ') : null;
@@ -160,14 +171,23 @@ app.post('/api/submit', async (req, res) => {
   const approveUrl = `${BASE_URL}/api/action?id=${id}&action=approve`;
   const rejectUrl  = `${BASE_URL}/api/action?id=${id}&action=reject`;
 
-  const typeLabel = isLeave
-    ? `<span style="display:inline-block;padding:3px 10px;background:#e8f5e9;color:#2e7d32;border-radius:20px;font-size:12px;font-weight:600">🏖️ Leave Request (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''})</span>`
-    : `<span style="display:inline-block;padding:3px 10px;background:#e3f2fd;color:#1565c0;border-radius:20px;font-size:12px;font-weight:600">🏦 Accumulate Credit (+${workedDates.length} day${workedDates.length > 1 ? 's' : ''})</span>`;
+  const typeLabel = isUseBalance
+    ? `<span style="display:inline-block;padding:3px 10px;background:#fff8e1;color:#f57f17;border-radius:20px;font-size:12px;font-weight:600">💳 Use Banked Leave (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''})</span>`
+    : isLeave
+      ? `<span style="display:inline-block;padding:3px 10px;background:#e8f5e9;color:#2e7d32;border-radius:20px;font-size:12px;font-weight:600">🏖️ Leave Request (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''})</span>`
+      : `<span style="display:inline-block;padding:3px 10px;background:#e3f2fd;color:#1565c0;border-radius:20px;font-size:12px;font-weight:600">🏦 Accumulate Credit (+${workedDates.length} day${workedDates.length > 1 ? 's' : ''})</span>`;
 
-  const dateRow = isLeave
+  const dateRow = isUseBalance
     ? `<tr><td style="padding:8px 0;color:#555;width:40%;vertical-align:top"><strong>Leave Date(s)</strong></td><td style="color:#222">${compoffFormatted}</td></tr>
-       <tr><td style="padding:8px 0;color:#555"><strong>Days Requested</strong></td><td style="color:#c62828"><strong>−${leaveDaysCount} comp-off day${leaveDaysCount > 1 ? 's' : ''} will be deducted</strong></td></tr>`
-    : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Days to Credit</strong></td><td style="color:#1565c0"><strong>+${workedDates.length} comp-off day${workedDates.length > 1 ? 's' : ''} to be banked</strong></td></tr>`;
+       <tr><td style="padding:8px 0;color:#555"><strong>Days Requested</strong></td><td style="color:#c62828"><strong>−${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''} from banked balance</strong></td></tr>`
+    : isLeave
+      ? `<tr><td style="padding:8px 0;color:#555;width:40%;vertical-align:top"><strong>Leave Date(s)</strong></td><td style="color:#222">${compoffFormatted}</td></tr>
+         <tr><td style="padding:8px 0;color:#555"><strong>Days Requested</strong></td><td style="color:#c62828"><strong>−${leaveDaysCount} comp-off day${leaveDaysCount > 1 ? 's' : ''} will be deducted</strong></td></tr>`
+      : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Days to Credit</strong></td><td style="color:#1565c0"><strong>+${workedDates.length} comp-off day${workedDates.length > 1 ? 's' : ''} to be banked</strong></td></tr>`;
+
+  const weekendRow = isUseBalance
+    ? '' // no weekend days worked for use_balance
+    : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Weekend(s) Worked</strong></td><td style="color:#222">${workedFormatted}</td></tr>`;
 
   const actionButtons = isLeave ? `
     <div style="margin-top:30px">
@@ -187,7 +207,7 @@ app.post('/api/submit', async (req, res) => {
       <p style="color:#888;font-size:13px;margin-bottom:24px">DPDzero — Data Support Team</p>
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <tr><td style="padding:8px 0;color:#555;width:40%"><strong>Employee</strong></td><td style="color:#222">${employeeName}</td></tr>
-        <tr><td style="padding:8px 0;color:#555"><strong>Weekend(s) Worked</strong></td><td style="color:#222">${workedFormatted}</td></tr>
+        ${weekendRow}
         ${dateRow}
         <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Work Done</strong></td><td style="color:#222">${reason}</td></tr>
       </table>
@@ -199,9 +219,11 @@ app.post('/api/submit', async (req, res) => {
     await transporter.sendMail({
       from: `"DPDzero Comp-Off Portal" <${process.env.GMAIL_USER}>`,
       to: 'arish@dpdzero.com',
-      subject: isLeave
-        ? `🏖️ Leave Request (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''}): ${employeeName} — ${compoffShort}`
-        : `🏦 Credit Request (+${workedDates.length} days): ${employeeName}`,
+      subject: isUseBalance
+        ? `💳 Balance Leave (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''}): ${employeeName} — ${compoffShort}`
+        : isLeave
+          ? `🏖️ Leave Request (${leaveDaysCount} day${leaveDaysCount > 1 ? 's' : ''}): ${employeeName} — ${compoffShort}`
+          : `🏦 Credit Request (+${workedDates.length} days): ${employeeName}`,
       html,
     });
     res.json({ success: true });
@@ -228,7 +250,8 @@ app.get('/api/action', async (req, res) => {
   db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(newStatus, id);
 
   const workedFormatted  = formatDates(row.worked_dates);
-  const isLeave          = row.request_type === 'take_leave';
+  const isLeave          = row.request_type === 'take_leave' || row.request_type === 'use_balance';
+  const isUseBalance     = row.request_type === 'use_balance';
   const compoffDates     = parseDates(row.compoff_dates);
   const leaveDays        = compoffDates.length;
   const compoffFormatted = compoffDates.map(d => formatSingle(d)).join(', ');
@@ -246,7 +269,7 @@ app.get('/api/action', async (req, res) => {
 
     const hrHtml = `
       <div style="font-family:Segoe UI,sans-serif;max-width:600px;margin:auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px">
-        <h2 style="color:#2e7d32;margin-bottom:4px">${isLeave ? '✅ Comp-Off Leave Approved' : '🏦 Comp-Off Credit Banked'}</h2>
+        <h2 style="color:#2e7d32;margin-bottom:4px">${isUseBalance ? '💳 Banked Leave Approved' : isLeave ? '✅ Comp-Off Leave Approved' : '🏦 Comp-Off Credit Banked'}</h2>
         <p style="color:#888;font-size:13px;margin-bottom:24px">DPDzero — Data Support Team</p>
         <p style="font-size:14px;color:#333;margin-bottom:20px">
           ${isLeave
@@ -255,9 +278,9 @@ app.get('/api/action', async (req, res) => {
         </p>
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <tr><td style="padding:8px 0;color:#555;width:40%"><strong>Employee</strong></td><td>${row.employee}</td></tr>
-          <tr><td style="padding:8px 0;color:#555"><strong>Weekend(s) Worked</strong></td><td>${workedFormatted}</td></tr>
+          ${isUseBalance ? '' : `<tr><td style="padding:8px 0;color:#555"><strong>Weekend(s) Worked</strong></td><td>${workedFormatted}</td></tr>`}
           ${impactRow}
-          <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Work Done</strong></td><td>${row.reason}</td></tr>
+          <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Work Done / Reason</strong></td><td>${row.reason}</td></tr>
           <tr><td style="padding:8px 0;color:#555"><strong>Approved By</strong></td><td>Sandeep</td></tr>
         </table>
         <p style="margin-top:16px;font-size:12px;color:#aaa">Dashboard updated automatically. Please update attendance system accordingly.</p>
