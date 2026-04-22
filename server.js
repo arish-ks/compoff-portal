@@ -11,10 +11,11 @@ const app      = express();
 const PORT     = process.env.PORT || 3000;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
-const GITHUB_REPO  = 'arish-ks/compoff-portal';
-const DB_FILE_PATH = 'data/db.json';
-const SHEET_ID     = '1G-Y9JHGhxSqV2-hhp6bixVBASvNU_s99f1OYYzSbPgM';
+const GITHUB_TOKEN  = process.env.GITHUB_TOKEN || '';
+const GITHUB_REPO   = 'arish-ks/compoff-portal';
+const DB_FILE_PATH  = 'data/db.json';
+const DB_BRANCH     = 'db-backup';   // separate branch — never triggers Render auto-deploy
+const SHEET_ID      = '1G-Y9JHGhxSqV2-hhp6bixVBASvNU_s99f1OYYzSbPgM';
 const RENDER_API_KEY = process.env.RENDER_API_KEY || 'rnd_FE8kdkEpWqPk2WnuUhiTW9Us0IFb';
 const RENDER_SVC_ID  = 'srv-d7k3q2d7vvec7393pjr0';
 
@@ -57,33 +58,57 @@ function githubRequest(method, endpoint, body) {
 
 // ── GitHub DB backup/restore ──────────────────────────────────────────────────
 let _dbFileSha = null;
+let _backupInProgress = false;
 
 async function fetchDbFromGitHub() {
-  try {
-    const res = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}`);
-    if (!res.sha) return null;
-    const content = Buffer.from(res.content.replace(/\n/g, ''), 'base64').toString('utf8');
-    return { sha: res.sha, data: JSON.parse(content) };
-  } catch { return null; }
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}?ref=${DB_BRANCH}`);
+      if (!res.sha) { console.warn('fetchDb: no sha on attempt', attempt); continue; }
+      const content = Buffer.from(res.content.replace(/\n/g, ''), 'base64').toString('utf8');
+      return { sha: res.sha, data: JSON.parse(content) };
+    } catch (e) {
+      console.error(`fetchDb attempt ${attempt} failed:`, e.message);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 1500 * attempt));
+    }
+  }
+  return null;
 }
 
 async function backupToGitHub() {
-  if (!GITHUB_TOKEN) return;
+  if (!GITHUB_TOKEN || _backupInProgress) return;
+  _backupInProgress = true;
   try {
     const all = db.prepare('SELECT * FROM requests ORDER BY created_at ASC').all();
     const content = Buffer.from(JSON.stringify({ requests: all }, null, 2)).toString('base64');
+    // Always fetch fresh SHA before writing to avoid conflicts
     if (!_dbFileSha) {
-      const cur = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}`);
+      const cur = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}?ref=${DB_BRANCH}`);
       if (cur.sha) _dbFileSha = cur.sha;
     }
     const body = {
-      message: `db: auto-backup ${new Date().toISOString()}`,
-      content, branch: 'main',
+      message: `db: backup ${new Date().toISOString()}`,
+      content,
+      branch: DB_BRANCH,
       ...(_dbFileSha ? { sha: _dbFileSha } : {}),
     };
     const res = await githubRequest('PUT', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}`, body);
-    if (res.content?.sha) _dbFileSha = res.content.sha;
+    if (res.content?.sha) {
+      _dbFileSha = res.content.sha;
+      console.log('✅ DB backed up to GitHub');
+    } else if (res.message) {
+      // SHA conflict — refresh and retry once
+      console.warn('Backup SHA conflict, retrying...');
+      _dbFileSha = null;
+      const cur2 = await githubRequest('GET', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}?ref=${DB_BRANCH}`);
+      if (cur2.sha) {
+        const body2 = { message: `db: backup-retry ${new Date().toISOString()}`, content, branch: DB_BRANCH, sha: cur2.sha };
+        const res2 = await githubRequest('PUT', `/repos/${GITHUB_REPO}/contents/${DB_FILE_PATH}`, body2);
+        if (res2.content?.sha) { _dbFileSha = res2.content.sha; console.log('✅ DB backed up (retry)'); }
+      }
+    }
   } catch (e) { console.error('GitHub backup error:', e.message); }
+  finally { _backupInProgress = false; }
 }
 
 // ── Render env var updater (to persist refresh token) ────────────────────────
@@ -147,11 +172,18 @@ db.prepare(`UPDATE requests SET status = 'rejected' WHERE status = 'reject'`).ru
 
 // ── Restore from GitHub on startup ───────────────────────────────────────────
 async function restoreFromGitHub() {
+  console.log('🔄 Restoring DB from GitHub backup branch...');
   const result = await fetchDbFromGitHub();
-  if (!result) { console.log('No GitHub backup found — starting fresh.'); return; }
+  if (!result) {
+    console.warn('⚠️  No GitHub backup found — starting with empty DB.');
+    return;
+  }
   _dbFileSha = result.sha;
   const { requests } = result.data;
-  if (!requests?.length) return;
+  if (!requests?.length) {
+    console.log('ℹ️  Backup is empty — no records to restore.');
+    return;
+  }
   const insert = db.prepare(`
     INSERT OR REPLACE INTO requests (id, employee, worked_dates, request_type, compoff_dates, reason, status, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -161,7 +193,7 @@ async function restoreFromGitHub() {
       insert.run(r.id, r.employee, r.worked_dates, r.request_type, r.compoff_dates, r.reason, r.status, r.created_at);
   });
   insertMany(requests);
-  console.log(`Restored ${requests.length} records from GitHub backup.`);
+  console.log(`✅ Restored ${requests.length} records from GitHub (branch: ${DB_BRANCH}).`);
 }
 
 // ── Mailer ────────────────────────────────────────────────────────────────────
@@ -618,7 +650,7 @@ app.post('/api/submit', async (req, res) => {
     .run(id, employeeName, JSON.stringify(workedDates || []), requestType,
          (requestType === 'take_leave' || requestType === 'use_balance') ? JSON.stringify(compoffDates) : null, reason);
 
-  backupToGitHub();
+  await backupToGitHub(); // await so data is safe before responding
 
   const workedFormatted  = workedDates?.length ? formatDates(JSON.stringify(workedDates)) : '—';
   const isLeave          = requestType === 'take_leave' || requestType === 'use_balance';
@@ -704,7 +736,7 @@ app.get('/api/action', async (req, res) => {
 
   const newStatus = action === 'approve' ? 'approved' : 'rejected';
   db.prepare('UPDATE requests SET status = ? WHERE id = ?').run(newStatus, id);
-  backupToGitHub();
+  await backupToGitHub(); // await so status change is persisted before email sends
 
   const workedFormatted  = formatDates(row.worked_dates);
   const isLeave          = row.request_type === 'take_leave' || row.request_type === 'use_balance';
