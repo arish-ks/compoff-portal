@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Comp-Off Request | DPDzero Data Support</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .logo h1 {
+      font-size: 22px;
+      color: #1a1a2e;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .logo p {
+      font-size: 13px;
+      color: #888;
+      margin-top: 4px;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #eef2ff;
+      color: #4361ee;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 6px;
+      margin-top: 18px;
+    }
+
+    select, input[type="date"], textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid #dde1e7;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #222;
+      background: #fafafa;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    select:focus, input[type="date"]:focus, textarea:focus {
+      border-color: #4361ee;
+      background: #fff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .weekend-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 20px;
+      border: 1.5px solid #dde1e7;
+      font-size: 13px;
+      cursor: pointer;
+      background: #fafafa;
+      color: #555;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .pill:hover { border-color: #4361ee; color: #4361ee; }
+    .pill.selected {
+      background: #4361ee;
+      color: #fff;
+      border-color: #4361ee;
+    }
+
+    .compoff-date-section {
+      margin-top: 18px;
+    }
+
+    button[type="submit"] {
+      margin-top: 28px;
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #4361ee, #3a0ca3);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      transition: opacity 0.2s;
+    }
+
+    button[type="submit"]:hover { opacity: 0.9; }
+    button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .toast {
+      display: none;
+      margin-top: 18px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .toast.success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+    .toast.error   { background: #fdecea; color: #c62828; border-left: 4px solid #f44336; }
+
+    .divider {
+      height: 1px;
+      background: #eee;
+      margin: 22px 0 4px;
+    }
+
+    .note {
+      font-size: 12px;
+      color: #999;
+      margin-top: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>DPDzero — Comp-Off Request</h1>
+      <p>Data Support Team</p>
+    </div>
+
+    <span class="badge">Weekend Work Compensation</span>
+
+    <form id="compoffForm">
+
+      <label for="employeeName">Your Name</label>
+      <select id="employeeName" name="employeeName" required>
+        <option value="" disabled selected>Select your name</option>
+        <option value="Aravind">Aravind</option>
+        <option value="Arish">Arish</option>
+        <option value="Laxman">Laxman</option>
+        <option value="Harshit Raj">Harshit Raj</option>
+        <option value="Nikhil">Nikhil</option>
+      </select>
+
+      <label>Weekend Day(s) Worked <span style="color:#999;font-weight:400">(select all that apply)</span></label>
+      <div class="weekend-pills" id="pillContainer"></div>
+
+      <div class="compoff-date-section">
+        <label for="compoffDate">Comp-Off Date Requested</label>
+        <input type="date" id="compoffDate" name="compoffDate" required />
+      </div>
+
+      <label for="reason">Reason / Work Done</label>
+      <textarea id="reason" name="reason" placeholder="Briefly describe the work you did on the weekend..." required></textarea>
+
+      <div class="divider"></div>
+
+      <button type="submit" id="submitBtn">Submit Request to Sandeep</button>
+
+      <div class="toast" id="toast"></div>
+
+      <p class="note">Your request will be sent to Sandeep for approval. HR will be notified once approved.</p>
+    </form>
+  </div>
+
+  <script>
+    // Generate last 8 weekend dates (Sat & Sun)
+    function getRecentWeekends() {
+      const dates = [];
+      const today = new Date();
+      let d = new Date(today);
+      d.setDate(d.getDate() - 1); // start from yesterday
+      let count = 0;
+      while (dates.length < 10 && count < 60) {
+        const day = d.getDay();
+        if (day === 0 || day === 6) {
+          dates.push(new Date(d));
+        }
+        d.setDate(d.getDate() - 1);
+        count++;
+      }
+      return dates.reverse();
+    }
+
+    const container = document.getElementById('pillContainer');
+    const selectedDates = new Set();
+
+    getRecentWeekends().forEach(date => {
+      const label = date.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+      const iso = date.toISOString().split('T')[0];
+      const pill = document.createElement('div');
+      pill.className = 'pill';
+      pill.textContent = label;
+      pill.dataset.date = iso;
+      pill.addEventListener('click', () => {
+        if (selectedDates.has(iso)) {
+          selectedDates.delete(iso);
+          pill.classList.remove('selected');
+        } else {
+          selectedDates.add(iso);
+          pill.classList.add('selected');
+        }
+      });
+      container.appendChild(pill);
+    });
+
+    // Set min date for comp-off (today or future)
+    const compoffInput = document.getElementById('compoffDate');
+    const today = new Date().toISOString().split('T')[0];
+    compoffInput.min = today;
+
+    document.getElementById('compoffForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (selectedDates.size === 0) {
+        showToast('Please select at least one weekend day you worked.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Submitting...';
+
+      const payload = {
+        employeeName: document.getElementById('employeeName').value,
+        workedDates: Array.from(selectedDates),
+        compoffDate: document.getElementById('compoffDate').value,
+        reason: document.getElementById('reason').value,
+      };
+
+      try {
+        const res = await fetch('/api/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Request submitted! Sandeep will receive an email to approve your comp-off.', 'success');
+          e.target.reset();
+          selectedDates.clear();
+          document.querySelectorAll('.pill').forEach(p => p.classList.remove('selected'));
+        } else {
+          showToast(data.error || 'Something went wrong. Please try again.', 'error');
+        }
+      } catch (err) {
+        showToast('Network error. Please check your connection.', 'error');
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Submit Request to Sandeep';
+    });
+
+    function showToast(msg, type) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = `toast ${type}`;
+      t.style.display = 'block';
+      setTimeout(() => { t.style.display = 'none'; }, 6000);
+    }
+  </script>
+</body>
+</html>
