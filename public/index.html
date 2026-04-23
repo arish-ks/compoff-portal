@@ -462,6 +462,19 @@
       box-shadow: 0 2px 12px rgba(92,170,250,0.4);
     }
 
+    /* Past working days in leave calendar — selectable but visually muted */
+    .cal-cell.leave-past {
+      color: rgba(255,255,255,0.4);
+      background: rgba(255,255,255,0.04);
+      border: 1px dashed rgba(255,255,255,0.15);
+      cursor: pointer;
+    }
+    .cal-cell.leave-past:hover {
+      background: rgba(103,90,249,0.15);
+      border-color: var(--purple-400);
+      color: #fff;
+    }
+
     .cal-cell.today {
       outline: 2px solid rgba(255,202,84,0.5);
       outline-offset: -2px;
@@ -861,7 +874,7 @@
             <div class="section-icon mint">🏖️</div>
             <div>
               <div class="section-title">Select Leave Date(s)</div>
-              <div class="section-subtitle">Pick the working days you want to take off</div>
+              <div class="section-subtitle">Pick the working days you want to take off — past or future</div>
             </div>
           </div>
 
@@ -883,6 +896,9 @@
           <div class="cal-legend" style="margin-top:10px">
             <div class="cal-legend-item">
               <div class="cal-legend-dot" style="background:var(--purple-500)"></div> Selected leave day
+            </div>
+            <div class="cal-legend-item">
+              <div class="cal-legend-dot" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.2)"></div> Past working day
             </div>
             <div class="cal-legend-item" style="margin-left:auto">
               <span id="leaveSelectionCount" style="color:rgba(255,255,255,0.4);font-size:11px;font-family:'Inter',sans-serif">No dates selected</span>
@@ -1091,11 +1107,15 @@
   // Init calendar
   renderCalendar();
 
-  // ── Leave date calendar (future working days) ──────────────────────────────
+  // ── Leave date calendar (past + future working days) ─────────────────────────
   const leaveDates = new Set();
   let leaveCalYear  = today.getFullYear();
   let leaveCalMonth = today.getMonth();
   let availableBalance = 0;
+
+  // How far back to allow (3 months)
+  const LEAVE_MIN_YEAR  = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1;
+  const LEAVE_MIN_MONTH = ((today.getMonth() - 3) + 12) % 12;
 
   function renderLeaveCalendar() {
     const grid  = document.getElementById('leaveCalGrid');
@@ -1104,11 +1124,16 @@
     grid.innerHTML = '';
     label.textContent = `${MONTHS[leaveCalMonth]} ${leaveCalYear}`;
 
-    // Don't allow going before current month
-    const isPastMonth = leaveCalYear < today.getFullYear() ||
-      (leaveCalYear === today.getFullYear() && leaveCalMonth < today.getMonth());
-    document.getElementById('leaveCalGrid').previousElementSibling.querySelector('.cal-nav-btn:first-child')
-      .style.opacity = isPastMonth ? '0.3' : '1';
+    // Disable prev btn if at min month, disable next btn if at current month
+    const navWrap = document.getElementById('leaveCalGrid').previousElementSibling;
+    const prevBtn = navWrap.querySelector('.cal-nav-btn:first-child');
+    const nextBtn = navWrap.querySelector('.cal-nav-btn:last-child');
+    const atMin = leaveCalYear === LEAVE_MIN_YEAR && leaveCalMonth === LEAVE_MIN_MONTH;
+    const atMax = leaveCalYear === today.getFullYear() && leaveCalMonth === today.getMonth();
+    prevBtn.style.opacity = atMin ? '0.3' : '1';
+    prevBtn.style.pointerEvents = atMin ? 'none' : 'auto';
+    nextBtn.style.opacity = atMax ? '0.3' : '1';
+    nextBtn.style.pointerEvents = atMax ? 'none' : 'auto';
 
     // Day headers
     DAY_HEADERS.forEach((d, i) => {
@@ -1130,35 +1155,38 @@
     for (let d = 1; d <= daysInMonth; d++) {
       const cellDate = new Date(leaveCalYear, leaveCalMonth, d);
       cellDate.setHours(0,0,0,0);
-      const dow     = cellDate.getDay();
-      const iso     = toISO(leaveCalYear, leaveCalMonth, d);
-      const isPast  = cellDate <= today;
-      const isWknd  = dow === 0 || dow === 6;
-      const isToday = cellDate.getTime() === today.getTime();
+      const dow       = cellDate.getDay();
+      const iso       = toISO(leaveCalYear, leaveCalMonth, d);
+      const isPast    = cellDate < today;   // strictly before today
+      const isToday   = cellDate.getTime() === today.getTime();
+      const isFuture  = cellDate > today;
+      const isWknd    = dow === 0 || dow === 6;
 
       const cell = document.createElement('div');
       cell.textContent = d;
 
-      if (isPast || isWknd) {
-        cell.className = 'cal-cell weekday'; // greyed — weekends and past not available for leave
+      if (isWknd) {
+        // Weekends never selectable as leave
+        cell.className = 'cal-cell weekday';
       } else {
-        // Future working day — can take leave
+        // Working day (past or future) — selectable
         const alreadySelected = leaveDates.has(iso);
         const type = document.getElementById('requestType').value;
-        const cap = type === 'use_balance' ? availableBalance : selectedDates.size;
+        const cap  = type === 'use_balance' ? availableBalance : selectedDates.size;
         const atLimit = !alreadySelected && leaveDates.size >= cap;
-        cell.className = `cal-cell weekend`; // reuse weekend style for clickable
-        if (alreadySelected) cell.classList.add('selected');
+
         if (atLimit) {
-          cell.classList.remove('weekend');
-          cell.classList.add('weekday');
+          cell.className = isPast ? 'cal-cell weekday leave-past-dim' : 'cal-cell weekday';
           cell.title = `You've already selected ${cap} leave day${cap !== 1 ? 's' : ''} (max for this request)`;
         } else {
+          // Clickable — past days get a muted style to distinguish from future
+          cell.className = isPast
+            ? 'cal-cell weekend leave-past'
+            : 'cal-cell weekend';
+          if (alreadySelected) cell.classList.add('selected');
           cell.addEventListener('click', () => toggleLeaveDate(cell, iso));
         }
         if (alreadySelected) {
-          // re-add click to deselect even if at limit
-          cell.classList.remove('weekday');
           cell.className = 'cal-cell weekend selected';
           cell.addEventListener('click', () => toggleLeaveDate(cell, iso));
         }
@@ -1248,9 +1276,17 @@
     leaveCalMonth += dir;
     if (leaveCalMonth < 0)  { leaveCalMonth = 11; leaveCalYear--; }
     if (leaveCalMonth > 11) { leaveCalMonth = 0;  leaveCalYear++; }
-    // Don't go before current month
-    if (leaveCalYear < today.getFullYear() ||
-        (leaveCalYear === today.getFullYear() && leaveCalMonth < today.getMonth())) {
+    // Don't go before min month (3 months back)
+    if (leaveCalYear < LEAVE_MIN_YEAR ||
+        (leaveCalYear === LEAVE_MIN_YEAR && leaveCalMonth < LEAVE_MIN_MONTH)) {
+      leaveCalMonth -= dir;
+      if (leaveCalMonth < 0)  { leaveCalMonth = 11; leaveCalYear++; }
+      if (leaveCalMonth > 11) { leaveCalMonth = 0;  leaveCalYear--; }
+      return;
+    }
+    // Don't go beyond current month
+    if (leaveCalYear > today.getFullYear() ||
+        (leaveCalYear === today.getFullYear() && leaveCalMonth > today.getMonth())) {
       leaveCalMonth -= dir;
       if (leaveCalMonth < 0)  { leaveCalMonth = 11; leaveCalYear++; }
       if (leaveCalMonth > 11) { leaveCalMonth = 0;  leaveCalYear--; }
