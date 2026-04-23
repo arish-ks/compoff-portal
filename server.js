@@ -768,41 +768,11 @@ app.get('/api/action', async (req, res) => {
       : `<tr><td style="padding:8px 0;color:#555;width:40%"><strong>Credits Added</strong></td><td style="color:#2e7d32"><strong>+${daysWorked} day${daysWorked > 1 ? 's' : ''} banked ✓</strong></td></tr>
          <tr><td style="padding:8px 0;color:#555"><strong>Total Balance</strong></td><td style="color:#222"><strong>${balAfter.remaining} day${balAfter.remaining !== 1 ? 's' : ''} available</strong></td></tr>`;
 
-    const hrHtml = `
-      <div style="font-family:Segoe UI,sans-serif;max-width:600px;margin:auto;padding:30px;border:1px solid #e0e0e0;border-radius:12px">
-        <h2 style="color:#2e7d32;margin-bottom:4px">${isUseBalance ? '💳 Banked Leave Approved' : isLeave ? '✅ Comp-Off Leave Approved' : '🏦 Comp-Off Credit Banked'}</h2>
-        <p style="color:#888;font-size:13px;margin-bottom:24px">DPDzero — Data Support Team</p>
-        <p style="font-size:14px;color:#333;margin-bottom:20px">
-          ${isLeave
-            ? `Comp-off leave for <strong>${row.employee}</strong> approved by Sandeep. <strong>${leaveDays} day${leaveDays > 1 ? 's' : ''}</strong> deducted from their balance.`
-            : `Weekend work by <strong>${row.employee}</strong> acknowledged by Sandeep. <strong>+${daysWorked} day${daysWorked > 1 ? 's' : ''}</strong> added to their comp-off balance.`}
-        </p>
-        <table style="width:100%;border-collapse:collapse;font-size:14px">
-          <tr><td style="padding:8px 0;color:#555;width:40%"><strong>Employee</strong></td><td>${row.employee}</td></tr>
-          ${isUseBalance ? '' : `<tr><td style="padding:8px 0;color:#555"><strong>Weekend(s) Worked</strong></td><td>${workedFormatted}</td></tr>`}
-          ${impactRow}
-          <tr><td style="padding:8px 0;color:#555;vertical-align:top"><strong>Work Done / Reason</strong></td><td>${row.reason}</td></tr>
-          <tr><td style="padding:8px 0;color:#555"><strong>Approved By</strong></td><td>Sandeep</td></tr>
-        </table>
-        <p style="margin-top:16px;font-size:12px;color:#aaa">Dashboard updated automatically. Please update attendance system accordingly.</p>
-      </div>`;
-
-    try {
-      await transporter.sendMail({
-        from: `"DPDzero Comp-Off Portal" <${process.env.GMAIL_USER}>`,
-        to: 'arish@dpdzero.com',
-        subject: isLeave
-          ? `✅ Leave Approved (−${leaveDays} day${leaveDays > 1 ? 's' : ''}): ${row.employee}`
-          : `🏦 +${daysWorked} Credits Banked: ${row.employee}`,
-        html: hrHtml,
-      });
-    } catch (err) { console.error('HR mail error:', err.message); }
-
     return res.send(page(
       isLeave ? 'Leave Approved!' : 'Credit Banked!',
       isLeave
-        ? `<strong>${leaveDays} comp-off day${leaveDays > 1 ? 's' : ''}</strong> approved for <strong>${row.employee}</strong>. Remaining balance: <strong>${balAfter.remaining} day${balAfter.remaining !== 1 ? 's' : ''}</strong>. HR notified.`
-        : `<strong>+${daysWorked} comp-off day${daysWorked > 1 ? 's' : ''}</strong> added to <strong>${row.employee}</strong>'s balance. New balance: <strong>${balAfter.remaining} day${balAfter.remaining !== 1 ? 's' : ''}</strong>. HR notified.`,
+        ? `<strong>${leaveDays} comp-off day${leaveDays > 1 ? 's' : ''}</strong> approved for <strong>${row.employee}</strong>. Remaining balance: <strong>${balAfter.remaining} day${balAfter.remaining !== 1 ? 's' : ''}</strong>.`
+        : `<strong>+${daysWorked} comp-off day${daysWorked > 1 ? 's' : ''}</strong> added to <strong>${row.employee}</strong>'s balance. New balance: <strong>${balAfter.remaining} day${balAfter.remaining !== 1 ? 's' : ''}</strong>.`,
       '#4caf50'
     ));
   } else {
